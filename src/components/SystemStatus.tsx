@@ -100,7 +100,7 @@ export const SystemStatus = ({ backendAvailable = false }: SystemStatusProps) =>
               : 'bg-yellow-50 border-yellow-200'
           }`}>
             <div className="flex items-center space-x-2 mb-2">
-              <Database className="h-5 w-5" className={backendAvailable ? 'text-green-600' : 'text-yellow-600'} />
+              <Database className={`h-5 w-5 ${backendAvailable ? 'text-green-600' : 'text-yellow-600'}`} />
               <span className={`font-medium ${backendAvailable ? 'text-green-900' : 'text-yellow-900'}`}>
                 Backend
               </span>
