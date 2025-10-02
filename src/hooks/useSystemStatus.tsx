@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext } from 'react';
+import React, { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { useSupabase } from './useSupabase';
 
 interface SystemStatus {
@@ -26,7 +26,7 @@ export const useSystemStatus = () => {
   return context;
 };
 
-export const SystemStatusProvider = ({ children }: { children: React.ReactNode }) => {
+export const SystemStatusProvider = ({ children }: { children: ReactNode }) => {
   const [status, setStatus] = useState<SystemStatus>({
     backendOnline: false,
     lastChecked: null,

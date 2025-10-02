@@ -12,6 +12,7 @@
     "type-check": "tsc --noEmit",
     "deploy:vercel": "vercel --prod",
     "deploy:netlify": "netlify deploy --prod --dir=dist",
+    "build:netlify": "npm run type-check && vite build",
     "backup:data": "node scripts/backup-data.js",
     "migrate:data": "echo 'Execute o arquivo scripts/migrate-data.sql no Supabase SQL Editor'"
   },
