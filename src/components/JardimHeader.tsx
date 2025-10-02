@@ -2,8 +2,7 @@ import { User, Menu, X, Home, FileText, Bell, Settings, BarChart3, Eye, Accessib
 import { Button } from './ui/button';
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-const jardimLogo = "/images/jardim-logo.png";
-const jardimLogoHorizontal = "/images/jardim-logo.png";
+import { JardimLogo } from './JardimLogo';
 
 interface JardimHeaderProps {
   currentView: string;
@@ -70,20 +69,12 @@ export function JardimHeader({ currentView, onViewChange, alertCount = 0 }: Jard
               <div className="flex items-center">
                 {/* Logo horizontal oficial da Prefeitura de Jardim - desktop */}
                 <div className="hidden lg:block">
-                  <img 
-                    src={jardimLogoHorizontal} 
-                    alt="Governo Municipal de Jardim - CE" 
-                    className="h-16 w-auto"
-                  />
+                  <JardimLogo variant="rectangular" className="h-12 w-auto max-w-sm" alt="Governo Municipal de Jardim - CE" />
                 </div>
                 
                 {/* Logo redonda + título - mobile e tablet */}
                 <div className="lg:hidden flex items-center">
-                  <img 
-                    src={jardimLogo} 
-                    alt="Prefeitura de Jardim - CE" 
-                    className="w-16 h-16 mr-3 bg-white rounded-full p-1 shadow-sm"
-                  />
+                  <JardimLogo variant="round" className="w-12 h-12 mr-3 flex-shrink-0" />
                   <div>
                     <h1 className="transpjardim-title transpjardim-title-medium">
                       TranspJardim

@@ -56,3 +56,6 @@ export const exportCriteriosToExcel = (criterios: Criterio[]) => {
   link.click();
   document.body.removeChild(link);
 };
+
+// Alias para compatibilidade com outras partes do sistema
+export const exportToExcel = exportCriteriosToExcel;

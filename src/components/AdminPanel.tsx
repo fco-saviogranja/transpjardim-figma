@@ -7,8 +7,11 @@ import { JardimBreadcrumb } from './JardimBreadcrumb';
 import { UserManagement } from './UserManagement';
 import { SystemInitializer } from './SystemInitializer';
 import { SystemStatus } from './SystemStatus';
+import { BackupPanel } from './BackupPanel';
+import { SystemSettings } from './SystemSettings';
 import { useSupabase } from '../hooks/useSupabase';
-const jardimLogo = "/images/jardim-logo.png";
+import { JardimLogo } from './JardimLogo';
+import { mockCriterios, mockAlertas } from '../lib/mockData';
 
 export const AdminPanel = () => {
   const [currentView, setCurrentView] = useState<string>('dashboard');
@@ -104,6 +107,10 @@ export const AdminPanel = () => {
       setCurrentView('users');
     } else if (action === 'init-system') {
       setCurrentView('init-system');
+    } else if (action === 'backup') {
+      setCurrentView('backup');
+    } else if (action === 'settings') {
+      setCurrentView('settings');
     } else {
       // Em produção, navegaria para outras telas específicas
       console.log(`Ação administrativa: ${action}`);
@@ -156,17 +163,62 @@ export const AdminPanel = () => {
     );
   }
 
+  if (currentView === 'backup') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentView('dashboard')}
+            className="flex items-center space-x-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Voltar ao Painel</span>
+          </Button>
+          <JardimBreadcrumb items={[
+            { label: 'Administração', href: '#' },
+            { label: 'Backup de Dados' }
+          ]} />
+        </div>
+        <div className="bg-white rounded-lg p-6 shadow-sm border border-[var(--border)]">
+          <BackupPanel 
+            criterios={mockCriterios} 
+            alertas={mockAlertas}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (currentView === 'settings') {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentView('dashboard')}
+            className="flex items-center space-x-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Voltar ao Painel</span>
+          </Button>
+          <JardimBreadcrumb items={[
+            { label: 'Administração', href: '#' },
+            { label: 'Configurações do Sistema' }
+          ]} />
+        </div>
+        <SystemSettings />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <JardimBreadcrumb items={[{ label: 'Administração' }]} />
       
       <div className="bg-white rounded-lg p-6 shadow-sm border border-[var(--border)]">
         <div className="flex items-center space-x-3 mb-4">
-          <img 
-            src={jardimLogo} 
-            alt="Prefeitura de Jardim - CE" 
-            className="w-11 h-11 bg-white rounded-full p-1 shadow-sm"
-          />
+          <JardimLogo />
           <div>
             <h2 className="text-2xl font-bold text-[var(--jardim-green)]">Painel Administrativo</h2>
             <p className="text-[var(--jardim-gray)]">
@@ -223,12 +275,12 @@ export const AdminPanel = () => {
                   <CardHeader>
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-lg ${
-                        action.action === 'users' || action.action === 'init-system' 
+                        action.action === 'users' || action.action === 'init-system' || action.action === 'backup'
                           ? 'bg-[var(--jardim-green-lighter)]' 
                           : 'bg-blue-50'
                       }`}>
                         <Icon className={`h-5 w-5 ${
-                          action.action === 'users' || action.action === 'init-system'
+                          action.action === 'users' || action.action === 'init-system' || action.action === 'backup' || action.action === 'settings'
                             ? 'text-[var(--jardim-green)]' 
                             : 'text-blue-600'
                         }`} />

@@ -6,7 +6,7 @@ import { CriterioCompletionStatus } from './CriterioCompletionStatus';
 import { Criterio, Alerta, Metricas, User } from '../types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-const jardimLogo = "/images/jardim-logo.png";
+import { JardimLogo } from './JardimLogo';
 
 interface DashboardProps {
   criterios: Criterio[];
@@ -44,11 +44,7 @@ export const Dashboard = ({ criterios, alertas, metricas, user, onMarkAlertAsRea
       
       <div className="bg-white rounded-lg p-6 shadow-sm border border-[var(--border)]">
         <div className="flex items-center space-x-3 mb-4">
-          <img 
-            src={jardimLogo} 
-            alt="Prefeitura de Jardim - CE" 
-            className="w-12 h-12 bg-white rounded-full p-1 shadow-sm"
-          />
+          <JardimLogo className="w-12 h-12" />
           <div>
             <h2 className="text-2xl font-bold text-[var(--jardim-green)]">Indicadores de Transparência</h2>
             <p className="text-[var(--jardim-gray)]">

@@ -37,14 +37,35 @@ export const clearStoredAuth = () => {
 };
 
 export const validateLogin = (username: string, password: string): User | null => {
+  console.log(`Validando login mock: ${username}`);
+  console.log(`Usuários disponíveis:`, mockUsers.map(u => u.username));
+  
   // Simulação de validação - em produção viria da API
   const user = mockUsers.find(u => u.username === username);
   
-  // Para demo, qualquer senha serve
-  if (user && password.length > 0) {
+  if (!user) {
+    console.log(`Usuário ${username} não encontrado no mock`);
+    return null;
+  }
+  
+  // Validar senha baseado no usuário
+  const validPasswords = {
+    'admin': ['admin', 'admin123'],
+    'educacao': ['123', 'user123', 'educacao'],
+    'saude': ['123', 'user123', 'saude'], 
+    'obras': ['123', 'user123', 'obras'],
+    'ambiente': ['123', 'user123', 'ambiente'],
+    'usuario': ['usuario', 'user123']
+  };
+  
+  const userValidPasswords = validPasswords[username] || [password];
+  
+  if (userValidPasswords.includes(password)) {
+    console.log(`Login mock bem-sucedido para: ${username}`);
     return user;
   }
   
+  console.log(`Senha inválida para usuário: ${username}`);
   return null;
 };
 

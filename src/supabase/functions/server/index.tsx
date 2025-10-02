@@ -132,20 +132,20 @@ app.post('/make-server-225e1157/init-data', async (c) => {
       }, 500);
     }
     
-    // Criar usuários de exemplo
+    // Criar usuários de exemplo (senhas mais simples para facilitar testes)
     const usuarios = [
       {
         id: 'admin001',
         name: 'Administrador Sistema',
         username: 'admin',
-        password: 'admin123',
+        password: 'admin',
         role: 'admin'
       },
       {
         id: 'user001',
         name: 'João Silva',
         username: 'educacao',
-        password: 'user123',
+        password: '123',
         role: 'padrão',
         secretaria: 'Secretaria de Educação'
       },
@@ -153,7 +153,7 @@ app.post('/make-server-225e1157/init-data', async (c) => {
         id: 'user002',
         name: 'Maria Santos',
         username: 'saude',
-        password: 'user123',
+        password: '123',
         role: 'padrão',
         secretaria: 'Secretaria de Saúde'
       },
@@ -161,7 +161,7 @@ app.post('/make-server-225e1157/init-data', async (c) => {
         id: 'user003',
         name: 'Carlos Oliveira',
         username: 'obras',
-        password: 'user123',
+        password: '123',
         role: 'padrão',
         secretaria: 'Secretaria de Obras e Infraestrutura'
       },
@@ -169,7 +169,7 @@ app.post('/make-server-225e1157/init-data', async (c) => {
         id: 'user004',
         name: 'Ana Costa',
         username: 'ambiente',
-        password: 'user123',
+        password: '123',
         role: 'padrão',
         secretaria: 'Secretaria de Meio Ambiente'
       }
@@ -227,8 +227,16 @@ app.post('/make-server-225e1157/auth/login', async (c) => {
     // Buscar usuário
     const usuario = await kv.get(`usuario:${username}`);
     
-    if (!usuario || usuario.password !== password) {
-      console.log(`Login falhou para: ${username}`);
+    if (!usuario) {
+      console.log(`Usuário não encontrado: ${username}`);
+      return c.json({ 
+        success: false, 
+        error: `Usuário '${username}' não encontrado. Execute a inicialização de dados primeiro.` 
+      }, 401);
+    }
+    
+    if (usuario.password !== password) {
+      console.log(`Senha incorreta para usuário: ${username}`);
       return c.json({ 
         success: false, 
         error: 'Credenciais inválidas' 

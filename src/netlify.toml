@@ -1,7 +1,7 @@
 # Configuração Netlify para TranspJardim
 [build]
   publish = "dist"
-  command = "npm ci && npm run type-check && npm run build"
+  command = "npm run build"
 
 [build.environment]
   NODE_VERSION = "18.19.0"

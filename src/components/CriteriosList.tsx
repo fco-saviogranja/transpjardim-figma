@@ -15,7 +15,7 @@ import { CriterioForm } from './CriterioForm';
 import { CriterioCompletionStatus } from './CriterioCompletionStatus';
 import { UserCompletionHistory } from './UserCompletionHistory';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
-const jardimLogo = "/images/jardim-logo.png";
+import { JardimLogo } from './JardimLogo';
 
 interface CriteriosListProps {
   criterios: Criterio[];
@@ -142,11 +142,7 @@ export const CriteriosList = ({ criterios, user, onAddCriterio, onEditCriterio, 
         <CardHeader className="bg-[var(--jardim-green-lighter)] border-b border-[var(--border)] pb-4">
           {/* Cabeçalho Principal */}
           <div className="flex items-center space-x-3 mb-4">
-            <img 
-              src={jardimLogo} 
-              alt="Prefeitura de Jardim - CE" 
-              className="w-11 h-11 bg-white rounded-full p-1 shadow-sm"
-            />
+            <JardimLogo />
             <div className="flex-1">
               <h2 className="text-2xl font-bold text-[var(--jardim-green)]">Critérios e Indicadores</h2>
               <p className="text-[var(--jardim-gray)]">

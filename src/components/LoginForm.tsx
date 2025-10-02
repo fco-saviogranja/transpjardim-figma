@@ -7,7 +7,9 @@ import { Alert, AlertDescription } from './ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useAuth } from '../hooks/useAuth';
 import { SupabaseInitializer } from './SupabaseInitializer';
-const jardimLogo = "/images/jardim-logo.png";
+import { LoginDiagnostic } from './LoginDiagnostic';
+import { AutoInitializer } from './AutoInitializer';
+import { JardimLogo } from './JardimLogo';
 
 export const LoginForm = () => {
   const [username, setUsername] = useState('');
@@ -25,7 +27,7 @@ export const LoginForm = () => {
       const success = await login(username, password);
       
       if (!success) {
-        setError('Credenciais inválidas. Tente: admin/admin ou usuario/usuario');
+        setError('Credenciais inválidas. Verifique as credenciais de teste abaixo.');
       }
     } catch (err) {
       setError('Erro ao fazer login. Tente novamente.');
@@ -39,11 +41,7 @@ export const LoginForm = () => {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <img 
-              src={jardimLogo} 
-              alt="Prefeitura de Jardim - CE" 
-              className="w-16 h-16 bg-white rounded-full p-2 shadow-lg"
-            />
+            <JardimLogo className="w-16 h-16 drop-shadow-lg" />
           </div>
           <CardTitle className="transpjardim-title transpjardim-title-large mb-2">
             TranspJardim
@@ -53,9 +51,15 @@ export const LoginForm = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Status do Sistema */}
+          <div className="mb-6">
+            <AutoInitializer />
+          </div>
+
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="diagnostic">Diagnóstico</TabsTrigger>
               <TabsTrigger value="supabase">Supabase</TabsTrigger>
             </TabsList>
             
@@ -101,12 +105,22 @@ export const LoginForm = () => {
               </form>
 
               <div className="mt-6 p-3 bg-[var(--jardim-green-lighter)] rounded text-sm">
-                <p className="font-medium mb-1 text-[var(--jardim-green)]">Credenciais Mock:</p>
-                <p className="text-[var(--jardim-gray)]">Admin: <code className="bg-white px-1 rounded">admin / admin</code></p>
-                <p className="text-[var(--jardim-gray)]">Educação: <code className="bg-white px-1 rounded">educacao / 123</code></p>
-                <p className="text-[var(--jardim-gray)]">Saúde: <code className="bg-white px-1 rounded">saude / 123</code></p>
-                <p className="text-[var(--jardim-gray)]">Obras: <code className="bg-white px-1 rounded">obras / 123</code></p>
+                <p className="font-medium mb-2 text-[var(--jardim-green)]">Credenciais de Teste:</p>
+                <div className="space-y-1">
+                  <p className="text-[var(--jardim-gray)]">👤 Admin: <code className="bg-white px-1 rounded font-mono">admin / admin</code></p>
+                  <p className="text-[var(--jardim-gray)]">🎓 Educação: <code className="bg-white px-1 rounded font-mono">educacao / 123</code></p>
+                  <p className="text-[var(--jardim-gray)]">🏥 Saúde: <code className="bg-white px-1 rounded font-mono">saude / 123</code></p>
+                  <p className="text-[var(--jardim-gray)]">🏗️ Obras: <code className="bg-white px-1 rounded font-mono">obras / 123</code></p>
+                  <p className="text-[var(--jardim-gray)]">🌱 Ambiente: <code className="bg-white px-1 rounded font-mono">ambiente / 123</code></p>
+                </div>
+                <p className="text-xs text-[var(--jardim-gray)] mt-2">
+                  💡 Use qualquer uma das credenciais acima para acessar o sistema
+                </p>
               </div>
+            </TabsContent>
+            
+            <TabsContent value="diagnostic">
+              <LoginDiagnostic />
             </TabsContent>
             
             <TabsContent value="supabase">

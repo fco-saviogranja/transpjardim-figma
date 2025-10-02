@@ -13,13 +13,16 @@ import { AdminPanel } from './components/AdminPanel';
 import { AdvancedMetrics } from './components/AdvancedMetrics';
 import { SystemHealthMonitor } from './components/SystemHealthMonitor';
 import { SimpleStatusNotification } from './components/SimpleStatusNotification';
+import { BackupNotification } from './components/BackupNotification';
 import { DebugPanel } from './components/DebugPanel';
 import { ToastDebugger } from './components/ToastDebugger';
 import { Toaster } from './components/ui/sonner';
+import { JardimLogo } from './components/JardimLogo';
 import { useAuth } from './hooks/useAuth';
 import { mockCriterios, mockAlertas, mockMetricas } from './lib/mockData';
 import { Alerta, Criterio, Metricas } from './types';
 import './utils/debug'; // Carregar debug utils
+import './utils/authTest'; // Carregar testes de autenticação
 
 function AppContent() {
   const { isAuthenticated, loading, user } = useAuth();
@@ -281,11 +284,7 @@ function AppContent() {
             
             <div className="bg-white rounded-lg p-6 shadow-sm border border-[var(--border)]">
               <div className="flex items-center space-x-3 mb-4">
-                <img 
-                  src="/images/jardim-logo.png" 
-                  alt="Prefeitura de Jardim - CE" 
-                  className="w-11 h-11 bg-white rounded-full p-1 shadow-sm"
-                />
+                <JardimLogo />
                 <div>
                   <h2 className="text-2xl font-bold text-[var(--jardim-green)]">Central de Alertas</h2>
                   <p className="text-[var(--jardim-gray)]">
@@ -312,11 +311,7 @@ function AppContent() {
             
             <div className="bg-white rounded-lg p-6 shadow-sm border border-[var(--border)]">
               <div className="flex items-center space-x-3 mb-6">
-                <img 
-                  src="/images/jardim-logo.png" 
-                  alt="Prefeitura de Jardim - CE" 
-                  className="w-11 h-11 bg-white rounded-full p-1 shadow-sm"
-                />
+                <JardimLogo />
                 <div>
                   <h2 className="text-2xl font-bold text-[var(--jardim-green)]">Relatórios Avançados</h2>
                   <p className="text-[var(--jardim-gray)]">
@@ -355,6 +350,7 @@ function AppContent() {
       <JardimFooter />
       <SystemHealthMonitor />
       <SimpleStatusNotification />
+      <BackupNotification />
       <ToastDebugger />
       <DebugPanel />
       <Toaster />

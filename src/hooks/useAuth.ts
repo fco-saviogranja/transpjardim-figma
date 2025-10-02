@@ -37,10 +37,28 @@ export const useAuthProvider = () => {
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      // Tentar login via Supabase primeiro
+      console.log(`Tentando login para usuário: ${username}`);
+      
+      // Primeiro, tentar autenticação mock (mais confiável)
+      const validatedUser = validateLogin(username, password);
+      
+      if (validatedUser) {
+        console.log(`Login mock bem-sucedido para: ${username}`);
+        const newToken = generateMockToken(validatedUser);
+        
+        setUser(validatedUser);
+        setToken(newToken);
+        setStoredAuth(validatedUser, newToken);
+        
+        return true;
+      }
+      
+      // Se mock falhou, tentar Supabase
+      console.log(`Login mock falhou, tentando Supabase para: ${username}`);
       const supabaseResponse = await supabase.login(username, password);
       
       if (supabaseResponse.success && supabaseResponse.data) {
+        console.log(`Login Supabase bem-sucedido para: ${username}`);
         const { user: supabaseUser, token: supabaseToken } = supabaseResponse.data;
         
         setUser(supabaseUser);
@@ -50,27 +68,17 @@ export const useAuthProvider = () => {
         return true;
       }
       
-      // Fallback para autenticação mock
-      const validatedUser = validateLogin(username, password);
-      
-      if (validatedUser) {
-        const newToken = generateMockToken(validatedUser);
-        
-        setUser(validatedUser);
-        setToken(newToken);
-        setStoredAuth(validatedUser, newToken);
-        
-        return true;
-      }
-      
+      console.log(`Ambos os métodos de login falharam para: ${username}`);
       return false;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Erro no login:', error);
       
-      // Em caso de erro no Supabase, tentar mock
+      // Em caso de erro crítico, tentar mock como último recurso
+      console.log(`Erro crítico no login, tentando mock como último recurso para: ${username}`);
       const validatedUser = validateLogin(username, password);
       
       if (validatedUser) {
+        console.log(`Login de emergência bem-sucedido para: ${username}`);
         const newToken = generateMockToken(validatedUser);
         
         setUser(validatedUser);
@@ -80,6 +88,7 @@ export const useAuthProvider = () => {
         return true;
       }
       
+      console.log(`Falha total no login para: ${username}`);
       return false;
     }
   };

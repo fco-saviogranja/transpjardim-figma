@@ -1,5 +1,5 @@
 import { MapPin, Phone, Mail, Clock, Globe } from 'lucide-react';
-const jardimLogo = "/images/jardim-logo.png";
+import { JardimLogo } from './JardimLogo';
 
 export function JardimFooter() {
   return (
@@ -9,11 +9,7 @@ export function JardimFooter() {
           {/* Informações da Prefeitura */}
           <div>
             <div className="flex items-center mb-4">
-              <img 
-                src={jardimLogo} 
-                alt="Prefeitura de Jardim - CE" 
-                className="w-11 h-11 mr-3 bg-white rounded-full p-1"
-              />
+              <JardimLogo className="w-11 h-11 mr-3" />
               <div>
                 <h3 className="font-semibold">Controladoria Municipal de Jardim</h3>
                 <p className="text-sm opacity-90">Ceará - Brasil</p>
