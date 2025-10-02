@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from './ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useAuth } from '../hooks/useAuth';
 import { SupabaseInitializer } from './SupabaseInitializer';
-import jardimLogo from 'figma:asset/4f3eac8f0c544542936be9cbdd5a45e730140e32.png';
+const jardimLogo = "/images/jardim-logo.png";
 
 export const LoginForm = () => {
   const [username, setUsername] = useState('');

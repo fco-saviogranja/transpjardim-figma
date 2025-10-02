@@ -2,8 +2,8 @@ import { User, Menu, X, Home, FileText, Bell, Settings, BarChart3, Eye, Accessib
 import { Button } from './ui/button';
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import jardimLogo from 'figma:asset/4f3eac8f0c544542936be9cbdd5a45e730140e32.png';
-import jardimLogoHorizontal from 'figma:asset/2650d7f297840d66424e3507240eb97b423817f4.png';
+const jardimLogo = "/images/jardim-logo.png";
+const jardimLogoHorizontal = "/images/jardim-logo.png";
 
 interface JardimHeaderProps {
   currentView: string;

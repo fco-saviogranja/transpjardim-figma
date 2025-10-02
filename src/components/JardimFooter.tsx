@@ -1,5 +1,5 @@
 import { MapPin, Phone, Mail, Clock, Globe } from 'lucide-react';
-import jardimLogo from 'figma:asset/4f3eac8f0c544542936be9cbdd5a45e730140e32.png';
+const jardimLogo = "/images/jardim-logo.png";
 
 export function JardimFooter() {
   return (

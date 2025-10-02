@@ -282,7 +282,7 @@ function AppContent() {
             <div className="bg-white rounded-lg p-6 shadow-sm border border-[var(--border)]">
               <div className="flex items-center space-x-3 mb-4">
                 <img 
-                  src="figma:asset/4f3eac8f0c544542936be9cbdd5a45e730140e32.png" 
+                  src="/images/jardim-logo.png" 
                   alt="Prefeitura de Jardim - CE" 
                   className="w-11 h-11 bg-white rounded-full p-1 shadow-sm"
                 />
@@ -313,7 +313,7 @@ function AppContent() {
             <div className="bg-white rounded-lg p-6 shadow-sm border border-[var(--border)]">
               <div className="flex items-center space-x-3 mb-6">
                 <img 
-                  src="figma:asset/4f3eac8f0c544542936be9cbdd5a45e730140e32.png" 
+                  src="/images/jardim-logo.png" 
                   alt="Prefeitura de Jardim - CE" 
                   className="w-11 h-11 bg-white rounded-full p-1 shadow-sm"
                 />

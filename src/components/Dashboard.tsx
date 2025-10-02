@@ -6,7 +6,7 @@ import { CriterioCompletionStatus } from './CriterioCompletionStatus';
 import { Criterio, Alerta, Metricas, User } from '../types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import jardimLogo from 'figma:asset/4f3eac8f0c544542936be9cbdd5a45e730140e32.png';
+const jardimLogo = "/images/jardim-logo.png";
 
 interface DashboardProps {
   criterios: Criterio[];

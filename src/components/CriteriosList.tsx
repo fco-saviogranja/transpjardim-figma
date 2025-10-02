@@ -15,7 +15,7 @@ import { CriterioForm } from './CriterioForm';
 import { CriterioCompletionStatus } from './CriterioCompletionStatus';
 import { UserCompletionHistory } from './UserCompletionHistory';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
-import jardimLogo from 'figma:asset/4f3eac8f0c544542936be9cbdd5a45e730140e32.png';
+const jardimLogo = "/images/jardim-logo.png";
 
 interface CriteriosListProps {
   criterios: Criterio[];

@@ -20,7 +20,7 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
-    minify: 'terser',
+    minify: 'esbuild',
     rollupOptions: {
       output: {
         manualChunks: {
@@ -29,7 +29,9 @@ export default defineConfig({
           ui: ['lucide-react', '@radix-ui/react-slot']
         }
       }
-    }
+    },
+    target: 'esnext',
+    chunkSizeWarningLimit: 1000
   },
   server: {
     port: 5173,

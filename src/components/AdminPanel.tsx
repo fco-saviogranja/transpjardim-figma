@@ -8,7 +8,7 @@ import { UserManagement } from './UserManagement';
 import { SystemInitializer } from './SystemInitializer';
 import { SystemStatus } from './SystemStatus';
 import { useSupabase } from '../hooks/useSupabase';
-import jardimLogo from 'figma:asset/4f3eac8f0c544542936be9cbdd5a45e730140e32.png';
+const jardimLogo = "/images/jardim-logo.png";
 
 export const AdminPanel = () => {
   const [currentView, setCurrentView] = useState<string>('dashboard');
