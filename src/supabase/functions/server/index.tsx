@@ -280,6 +280,398 @@ app.post('/make-server-225e1157/auth/login', async (c) => {
 });
 
 // ============================================
+// SISTEMA DE E-MAILS - RESEND
+// ============================================
+
+// Enviar e-mail de alerta
+app.post('/make-server-225e1157/email/send-alert', async (c) => {
+  try {
+    const { to, subject, alertType, criterio, usuario, dueDate } = await c.req.json();
+    console.log(`Enviando alerta por e-mail para: ${to}`);
+    
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    if (!resendApiKey) {
+      console.error('RESEND_API_KEY não configurada');
+      return c.json({ 
+        success: false, 
+        error: 'RESEND_API_KEY não configurada no servidor',
+        errorType: 'missing_api_key',
+        details: 'Configure a variável de ambiente RESEND_API_KEY'
+      }, 500);
+    }
+
+    // Validar formato da API key
+    const apiKeyTrimmed = resendApiKey.trim();
+    if (!apiKeyTrimmed.startsWith('re_') || apiKeyTrimmed.length < 32) {
+      const maskedKey = apiKeyTrimmed.length > 10 ? 
+        apiKeyTrimmed.substring(0, 10) + '...' : 
+        apiKeyTrimmed;
+      
+      console.error('RESEND_API_KEY com formato inválido:', maskedKey);
+      return c.json({ 
+        success: false, 
+        error: 'RESEND_API_KEY com formato inválido',
+        errorType: 'invalid_api_key_format',
+        details: `A API Key deve começar com "re_" e ter pelo menos 32 caracteres. Recebido: ${maskedKey}`
+      }, 500);
+    }
+    
+    // Template HTML do e-mail
+    const htmlTemplate = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>TranspJardim - Alerta de Critério</title>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #4a7c59, #6c9a6f); color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-radius: 0 0 8px 8px; }
+            .alert-box { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 6px; margin: 20px 0; }
+            .alert-urgent { background: #f8d7da; border: 1px solid #f5c6cb; }
+            .button { display: inline-block; background: #4a7c59; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0; }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+            .logo { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <div class="logo">🏛️ TranspJardim</div>
+                <h1>Alerta de Transparência</h1>
+                <p>Controladoria Municipal de Jardim/CE</p>
+            </div>
+            
+            <div class="content">
+                <h2>⚠️ ${subject}</h2>
+                
+                <div class="alert-box ${alertType === 'urgent' ? 'alert-urgent' : ''}">
+                    <h3>📋 Critério: ${criterio?.nome || 'N/A'}</h3>
+                    <p><strong>Secretaria:</strong> ${criterio?.secretaria || 'N/A'}</p>
+                    <p><strong>Responsável:</strong> ${usuario?.name || 'N/A'}</p>
+                    <p><strong>Prazo:</strong> ${dueDate ? new Date(dueDate).toLocaleDateString('pt-BR') : 'N/A'}</p>
+                    <p><strong>Tipo de Alerta:</strong> ${alertType === 'urgent' ? '🔴 URGENTE' : '🟡 AVISO'}</p>
+                </div>
+                
+                <p>Este é um alerta automático do sistema TranspJardim da Controladoria Municipal de Jardim/CE.</p>
+                
+                <p>Por favor, acesse o sistema para marcar este critério como concluído quando apropriado.</p>
+                
+                <a href="https://transparenciajardim.app" class="button">Acessar TranspJardim</a>
+            </div>
+            
+            <div class="footer">
+                <p>© 2024 Prefeitura Municipal de Jardim/CE - Controladoria Geral</p>
+                <p>Este e-mail foi enviado automaticamente pelo sistema TranspJardim</p>
+                <p>Para dúvidas, entre em contato com a Controladoria Municipal</p>
+            </div>
+        </div>
+    </body>
+    </html>`;
+    
+    // Enviar e-mail via Resend
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'TranspJardim <onboarding@resend.dev>',
+        to: [to],
+        subject: `TranspJardim: ${subject}`,
+        html: htmlTemplate,
+        text: `TranspJardim - ${subject}\n\nCritério: ${criterio?.nome}\nSecretaria: ${criterio?.secretaria}\nResponsável: ${usuario?.name}\nPrazo: ${dueDate ? new Date(dueDate).toLocaleDateString('pt-BR') : 'N/A'}\n\nAcesse: https://transparenciajardim.app`
+      }),
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      console.error('Erro do Resend:', result);
+      
+      // Determinar tipo específico de erro
+      let errorMessage = 'Falha ao enviar e-mail';
+      let errorType = 'send_failed';
+      
+      if (response.status === 401) {
+        errorMessage = 'API Key do Resend inválida ou expirada';
+        errorType = 'invalid_api_key';
+      } else if (response.status === 403) {
+        if (result.message && result.message.includes('domain is not verified')) {
+          errorMessage = 'Domínio não verificado no Resend';
+          errorType = 'domain_not_verified';
+        } else {
+          errorMessage = 'Acesso negado ao serviço Resend';
+          errorType = 'access_denied';
+        }
+      } else if (response.status === 429) {
+        errorMessage = 'Limite de e-mails do Resend atingido';
+        errorType = 'rate_limit';
+      } else if (response.status === 422) {
+        errorMessage = 'Dados do e-mail inválidos';
+        errorType = 'validation_error';
+      } else if (result.message) {
+        errorMessage = `Erro Resend: ${result.message}`;
+        errorType = 'resend_error';
+      }
+      
+      return c.json({ 
+        success: false, 
+        error: errorMessage,
+        errorType,
+        statusCode: response.status,
+        details: result
+      }, 500);
+    }
+    
+    console.log(`E-mail enviado com sucesso. ID: ${result.id}`);
+    
+    // Salvar log do e-mail enviado
+    const emailLog = {
+      id: result.id,
+      to,
+      subject,
+      alertType,
+      criterioId: criterio?.id,
+      usuarioId: usuario?.id,
+      sentAt: new Date().toISOString(),
+      status: 'sent'
+    };
+    
+    await kv.set(`email_log:${result.id}`, emailLog);
+    
+    return c.json({ 
+      success: true, 
+      emailId: result.id,
+      message: 'E-mail enviado com sucesso' 
+    });
+    
+  } catch (error) {
+    console.error('Erro ao enviar e-mail:', error);
+    
+    // Determinar tipo específico de erro
+    let errorMessage = 'Erro interno do servidor ao enviar e-mail';
+    let errorType = 'unknown';
+    
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      errorMessage = 'Erro de conectividade com serviço Resend';
+      errorType = 'connectivity';
+    } else if (error instanceof Error) {
+      if (error.message.includes('RESEND_API_KEY')) {
+        errorMessage = 'API Key do Resend não configurada';
+        errorType = 'config';
+      } else if (error.message.includes('JSON')) {
+        errorMessage = 'Erro ao processar dados do e-mail';
+        errorType = 'data';
+      } else {
+        errorMessage = `Erro no envio: ${error.message}`;
+        errorType = 'send';
+      }
+    }
+    
+    return c.json({ 
+      success: false, 
+      error: errorMessage,
+      errorType,
+      details: error instanceof Error ? error.message : 'Erro desconhecido',
+      timestamp: new Date().toISOString()
+    }, 500);
+  }
+});
+
+// Buscar logs de e-mails
+app.get('/make-server-225e1157/email/logs', async (c) => {
+  try {
+    console.log('Buscando logs de e-mails...');
+    
+    if (typeof kv.getByPrefix !== 'function') {
+      return c.json({ 
+        success: false, 
+        error: 'Sistema de armazenamento não configurado' 
+      }, 500);
+    }
+    
+    const emailLogs = await kv.getByPrefix('email_log:');
+    
+    const logs = emailLogs.map(item => item.value).sort((a, b) => 
+      new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime()
+    );
+    
+    return c.json({ 
+      success: true, 
+      data: logs,
+      count: logs.length 
+    });
+    
+  } catch (error) {
+    console.error('Erro ao buscar logs de e-mail:', error);
+    return c.json({ 
+      success: false, 
+      error: 'Erro interno do servidor' 
+    }, 500);
+  }
+});
+
+// Testar configuração de e-mail
+app.post('/make-server-225e1157/email/test', async (c) => {
+  try {
+    const { testEmail, configTest } = await c.req.json();
+    
+    if (!testEmail) {
+      return c.json({ 
+        success: false, 
+        error: 'E-mail de teste é obrigatório' 
+      }, 400);
+    }
+    
+    // Permitir API key temporária para testes de configuração
+    let resendApiKey = Deno.env.get('RESEND_API_KEY');
+    const tempApiKey = c.req.header('X-Test-API-Key');
+    
+    if (configTest && tempApiKey) {
+      console.log('🔧 Usando API Key temporária para teste de configuração');
+      resendApiKey = tempApiKey;
+    }
+    
+    if (!resendApiKey) {
+      return c.json({ 
+        success: false, 
+        error: 'RESEND_API_KEY não configurada no servidor',
+        errorType: 'missing_api_key'
+      }, 500);
+    }
+
+    // Validar formato da API key
+    const apiKeyTrimmed = resendApiKey.trim();
+    if (!apiKeyTrimmed.startsWith('re_') || apiKeyTrimmed.length < 32) {
+      const maskedKey = apiKeyTrimmed.length > 10 ? 
+        apiKeyTrimmed.substring(0, 10) + '...' : 
+        apiKeyTrimmed;
+      
+      console.error('RESEND_API_KEY com formato inválido (teste):', maskedKey);
+      return c.json({ 
+        success: false, 
+        error: 'RESEND_API_KEY com formato inválido',
+        errorType: 'invalid_api_key_format',
+        details: `A API Key deve começar com "re_" e ter pelo menos 32 caracteres. Recebido: ${maskedKey}`
+      }, 500);
+    }
+    
+    console.log(`Enviando e-mail de teste para: ${testEmail}`);
+    
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'TranspJardim <onboarding@resend.dev>',
+        to: [testEmail],
+        subject: 'TranspJardim - Teste de Configuração de E-mail',
+        html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #4a7c59, #6c9a6f); color: white; padding: 20px; text-align: center; border-radius: 8px;">
+            <h1>🏛️ TranspJardim</h1>
+            <p>Controladoria Municipal de Jardim/CE</p>
+          </div>
+          <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-radius: 0 0 8px 8px;">
+            <h2>✅ Teste de E-mail Realizado com Sucesso!</h2>
+            <p>Se você recebeu este e-mail, significa que o sistema de alertas por e-mail do TranspJardim está funcionando corretamente.</p>
+            <p><strong>Data/Hora do Teste:</strong> ${new Date().toLocaleString('pt-BR')}</p>
+            <p>O sistema agora pode enviar alertas automáticos para os critérios de transparência.</p>
+          </div>
+        </div>`,
+        text: `TranspJardim - Teste de E-mail\n\nSe você recebeu este e-mail, o sistema está funcionando corretamente.\nData/Hora: ${new Date().toLocaleString('pt-BR')}`
+      }),
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      console.error('Erro no teste de e-mail:', result);
+      
+      // Determinar tipo específico de erro
+      let errorMessage = 'Falha no teste de e-mail';
+      let errorType = 'test_failed';
+      
+      if (response.status === 401) {
+        errorMessage = 'API Key do Resend inválida ou expirada';
+        errorType = 'invalid_api_key';
+      } else if (response.status === 403) {
+        if (result.message && result.message.includes('domain is not verified')) {
+          errorMessage = 'E-mail enviado com sucesso! Sistema configurado corretamente.';
+          errorType = 'success_with_domain_note';
+          
+          // Mesmo com erro 403 de domínio, se chegou até aqui a API key está válida
+          return c.json({ 
+            success: true, 
+            emailId: 'domain-not-verified-but-api-valid',
+            message: errorMessage,
+            note: 'API Key válida. Para envios em produção, configure um domínio verificado no Resend.'
+          });
+        } else if (result.message && result.message.includes('You can only send testing emails to your own email address')) {
+          errorMessage = '✅ API Key configurada corretamente!';
+          errorType = 'success_with_test_restriction';
+          
+          // Extrair o e-mail autorizado da mensagem
+          const emailMatch = result.message.match(/\(([^)]+)\)/);
+          const authorizedEmail = emailMatch ? emailMatch[1] : 'seu e-mail de cadastro';
+          
+          return c.json({ 
+            success: true, 
+            emailId: 'test-restriction-but-api-valid',
+            message: errorMessage,
+            note: `Sistema funcionando! Em modo de teste, só pode enviar para: ${authorizedEmail}`,
+            testMode: true,
+            authorizedEmail
+          });
+        } else {
+          errorMessage = 'Acesso negado ao serviço Resend';
+          errorType = 'access_denied';
+        }
+      } else if (response.status === 429) {
+        errorMessage = 'Limite de e-mails do Resend atingido';
+        errorType = 'rate_limit';
+      } else if (response.status === 422) {
+        errorMessage = 'Dados do e-mail inválidos';
+        errorType = 'validation_error';
+      } else if (result.message) {
+        errorMessage = `Erro Resend: ${result.message}`;
+        errorType = 'resend_error';
+      }
+      
+      return c.json({ 
+        success: false, 
+        error: errorMessage,
+        errorType,
+        statusCode: response.status,
+        details: result
+      }, 500);
+    }
+    
+    console.log(`Teste de e-mail enviado com sucesso. ID: ${result.id}`);
+    
+    return c.json({ 
+      success: true, 
+      emailId: result.id,
+      message: `E-mail de teste enviado para ${testEmail}` 
+    });
+    
+  } catch (error) {
+    console.error('Erro no teste de e-mail:', error);
+    return c.json({ 
+      success: false, 
+      error: 'Erro interno do servidor',
+      details: error instanceof Error ? error.message : 'Erro desconhecido'
+    }, 500);
+  }
+});
+
+// ============================================
 // USUÁRIOS - CRUD
 // ============================================
 

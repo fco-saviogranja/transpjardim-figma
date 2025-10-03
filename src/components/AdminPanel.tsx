@@ -2,13 +2,18 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Settings, Users, Database, Mail, Shield, Activity, ArrowLeft, Server } from 'lucide-react';
+import { Settings, Users, Database, Mail, Shield, Activity, ArrowLeft, Server, Bell, AlertTriangle } from 'lucide-react';
 import { JardimBreadcrumb } from './JardimBreadcrumb';
 import { UserManagement } from './UserManagement';
 import { SystemInitializer } from './SystemInitializer';
 import { SystemStatus } from './SystemStatus';
 import { BackupPanel } from './BackupPanel';
 import { SystemSettings } from './SystemSettings';
+import { AlertsConfigPanel } from './AlertsConfigPanel';
+import { EmailConfigPanel } from './EmailConfigPanel';
+import { AlertsDebugPanel } from './AlertsDebugPanel';
+import { EmailTestButton } from './EmailTestButton';
+import { EmailStatusIndicator } from './EmailStatusIndicator';
 import { useSupabase } from '../hooks/useSupabase';
 import { JardimLogo } from './JardimLogo';
 import { mockCriterios, mockAlertas } from '../lib/mockData';
@@ -96,9 +101,21 @@ export const AdminPanel = () => {
     },
     {
       title: 'Configurar Alertas',
-      description: 'Definir regras e destinatários de alertas',
-      icon: Mail,
+      description: 'Definir regras automáticas e notificações',
+      icon: Bell,
       action: 'alerts'
+    },
+    {
+      title: 'Sistema de E-mail',
+      description: 'Configurar e testar envio de e-mails',
+      icon: Mail,
+      action: 'email'
+    },
+    {
+      title: 'Debug de Alertas',
+      description: 'Testar e debugar sistema de alertas',
+      icon: AlertTriangle,
+      action: 'alerts-debug'
     }
   ];
 
@@ -113,6 +130,15 @@ export const AdminPanel = () => {
     } else if (action === 'settings') {
       console.log('[AdminPanel] Executando: setCurrentView(settings)');
       setCurrentView('settings');
+    } else if (action === 'alerts') {
+      console.log('[AdminPanel] Executando: setCurrentView(alerts)');
+      setCurrentView('alerts');
+    } else if (action === 'email') {
+      console.log('[AdminPanel] Executando: setCurrentView(email)');
+      setCurrentView('email');
+    } else if (action === 'alerts-debug') {
+      console.log('[AdminPanel] Executando: setCurrentView(alerts-debug)');
+      setCurrentView('alerts-debug');
     } else {
       // Em produção, navegaria para outras telas específicas
       console.log(`Ação administrativa: ${action}`);
@@ -216,19 +242,106 @@ export const AdminPanel = () => {
     );
   }
 
+  if (currentView === 'alerts') {
+    console.log('[AdminPanel] Renderizando view: alerts');
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentView('dashboard')}
+            className="flex items-center space-x-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Voltar ao Painel</span>
+          </Button>
+          <JardimBreadcrumb items={[
+            { label: 'Administração', href: '#' },
+            { label: 'Configurar Alertas' }
+          ]} />
+        </div>
+        <div className="space-y-4">
+          {/* Indicador de status de e-mail */}
+          <EmailStatusIndicator showFullAlert={true} />
+          
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-[var(--border)]">
+            <AlertsConfigPanel />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentView === 'email') {
+    console.log('[AdminPanel] Renderizando view: email');
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentView('dashboard')}
+            className="flex items-center space-x-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Voltar ao Painel</span>
+          </Button>
+          <JardimBreadcrumb items={[
+            { label: 'Administração', href: '#' },
+            { label: 'Sistema de E-mail' }
+          ]} />
+        </div>
+        <div className="bg-white rounded-lg p-6 shadow-sm border border-[var(--border)]">
+          <EmailConfigPanel onClose={() => setCurrentView('dashboard')} />
+        </div>
+      </div>
+    );
+  }
+
+  if (currentView === 'alerts-debug') {
+    console.log('[AdminPanel] Renderizando view: alerts-debug');
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center space-x-4">
+          <Button
+            variant="outline"
+            onClick={() => setCurrentView('dashboard')}
+            className="flex items-center space-x-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Voltar ao Painel</span>
+          </Button>
+          <JardimBreadcrumb items={[
+            { label: 'Administração', href: '#' },
+            { label: 'Debug de Alertas' }
+          ]} />
+        </div>
+        <div className="bg-white rounded-lg p-6 shadow-sm border border-[var(--border)]">
+          <AlertsDebugPanel onClose={() => setCurrentView('dashboard')} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <JardimBreadcrumb items={[{ label: 'Administração' }]} />
       
       <div className="bg-white rounded-lg p-6 shadow-sm border border-[var(--border)]">
-        <div className="flex items-center space-x-3 mb-4">
-          <JardimLogo />
-          <div>
-            <h2 className="text-2xl font-bold text-[var(--jardim-green)]">Painel Administrativo</h2>
-            <p className="text-[var(--jardim-gray)]">
-              Gerencie usuários, configurações e monitore o sistema
-            </p>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <JardimLogo />
+            <div>
+              <h2 className="text-2xl font-bold text-[var(--jardim-green)]">Painel Administrativo</h2>
+              <p className="text-[var(--jardim-gray)]">
+                Gerencie usuários, configurações e monitore o sistema
+              </p>
+            </div>
           </div>
+          
+          {/* Botão de teste de e-mail */}
+          <EmailTestButton 
+            onShowConfig={() => handleAction('email')}
+          />
         </div>
       </div>
 

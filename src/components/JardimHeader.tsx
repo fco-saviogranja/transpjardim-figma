@@ -1,8 +1,10 @@
-import { User, Menu, X, Home, FileText, Bell, Settings, BarChart3, Eye, Accessibility, Phone } from 'lucide-react';
+import { User, Menu, X, Home, FileText, Bell, Settings, BarChart3, Eye, Accessibility, Phone, Mail, AlertTriangle } from 'lucide-react';
 import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { JardimLogo } from './JardimLogo';
+import { useEmailStatus } from '../hooks/useEmailStatusOptimized';
 
 interface JardimHeaderProps {
   currentView: string;
@@ -13,6 +15,7 @@ interface JardimHeaderProps {
 export function JardimHeader({ currentView, onViewChange, alertCount = 0 }: JardimHeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, logout } = useAuth();
+  const { isConfigured: emailConfigured } = useEmailStatus();
 
   const navigation = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
@@ -96,6 +99,24 @@ export function JardimHeader({ currentView, onViewChange, alertCount = 0 }: Jard
                 </div>
               </div>
             </div>
+
+            {/* Indicador de status de e-mail */}
+            {user?.role === 'admin' && !emailConfigured && (
+              <div className="hidden lg:flex items-center mr-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onViewChange('admin')}
+                  className="bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100"
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  <span className="hidden xl:inline">Configurar E-mail</span>
+                  <Badge variant="destructive" className="ml-2 bg-red-500">
+                    !
+                  </Badge>
+                </Button>
+              </div>
+            )}
 
             {/* Navegação desktop */}
             <nav className="hidden lg:flex items-center space-x-1">

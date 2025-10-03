@@ -9,6 +9,8 @@ import { Dashboard } from './components/Dashboard';
 import { CriteriosList } from './components/CriteriosList';
 import { CriteriosChart } from './components/CriteriosChart';
 import { AlertsPanel } from './components/AlertsPanel';
+import { AdvancedAlertsPanel } from './components/AdvancedAlertsPanel';
+import { useAlertManager } from './hooks/useAlertManager';
 import { AdminPanel } from './components/AdminPanel';
 import { AdvancedMetrics } from './components/AdvancedMetrics';
 import { SystemHealthMonitor } from './components/SystemHealthMonitor';
@@ -16,6 +18,9 @@ import { SimpleStatusNotification } from './components/SimpleStatusNotification'
 import { BackupNotification } from './components/BackupNotification';
 import { DebugPanel } from './components/DebugPanel';
 import { ToastDebugger } from './components/ToastDebugger';
+import { EmailSetupNotification } from './components/EmailSetupNotification';
+import { EmailQuickSetupModal } from './components/EmailQuickSetupModal';
+import { useEmailStatus } from './hooks/useEmailStatusOptimized';
 import { Toaster } from './components/ui/sonner';
 import { JardimLogo } from './components/JardimLogo';
 import { useAuth } from './hooks/useAuth';
@@ -45,6 +50,44 @@ function AppContent() {
     mockCriterios.map(criterio => ({ ...criterio, meta: 100 }))
   );
   const [metricas, setMetricas] = useState<Metricas>(mockMetricas);
+  
+  // Estado para modal de configuração de e-mail
+  const [showEmailSetupModal, setShowEmailSetupModal] = useState(false);
+  
+  // Hook para verificar status do e-mail
+  const { isConfigured: emailConfigured, status: emailStatus } = useEmailStatus();
+
+  // Mostrar modal de configuração de e-mail automaticamente para admins
+  useEffect(() => {
+    if (user?.role === 'admin' && emailStatus === 'not_configured') {
+      const hasShownModal = localStorage.getItem('transpjardim-email-modal-shown') === 'true';
+      
+      if (!hasShownModal) {
+        // Aguardar um pouco antes de mostrar o modal
+        const timer = setTimeout(() => {
+          if (emailStatus === 'not_configured') {
+            setShowEmailSetupModal(true);
+            localStorage.setItem('transpjardim-email-modal-shown', 'true');
+          }
+        }, 8000); // 8 segundos de delay para dar tempo da verificação
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [user, emailStatus]); // Remover emailConfigured para evitar loops
+
+  // Sistema automático de geração de alertas
+  const handleNewAlert = useCallback((novoAlerta: Alerta) => {
+    setAlertas(prev => [novoAlerta, ...prev]);
+  }, []);
+
+  const { 
+    rules: alertRules, 
+    config: alertConfig, 
+    lastCheck: alertLastCheck,
+    alertHistory,
+    manualCheck: manualAlertCheck
+  } = useAlertManager(criterios, handleNewAlert);
 
   // Função para mudar view e persistir no localStorage
   const handleViewChange = useCallback((newView: string) => {
@@ -113,11 +156,27 @@ function AppContent() {
     setAlertas(prev => 
       prev.map(alerta => 
         alerta.id === alertaId 
-          ? { ...alerta, lido: true }
+          ? { ...alerta, lido: !alerta.lido } // Toggle read/unread
           : alerta
       )
     );
   }, []);
+
+  const handleMarkAllAlertsAsRead = useCallback(() => {
+    setAlertas(prev => 
+      prev.map(alerta => ({ ...alerta, lido: true }))
+    );
+  }, []);
+
+  const handleDeleteAlert = useCallback((alertaId: string) => {
+    setAlertas(prev => prev.filter(alerta => alerta.id !== alertaId));
+  }, []);
+
+  const handleArchiveAlert = useCallback((alertaId: string) => {
+    // Para este exemplo, arquivar é igual a marcar como lido
+    // Em uma implementação completa, poderia mover para uma tabela de arquivos
+    handleMarkAlertAsRead(alertaId);
+  }, [handleMarkAlertAsRead]);
 
   const alertasNaoLidos = useMemo(() => alertas.filter(a => !a.lido), [alertas]);
 
@@ -254,14 +313,26 @@ function AppContent() {
     switch (currentView) {
       case 'dashboard':
         return (
-          <Dashboard
-            criterios={filteredCriterios}
-            alertas={alertas}
-            metricas={metricas}
-            onMarkAlertAsRead={handleMarkAlertAsRead}
-            user={user}
-            onToggleCompletion={handleToggleCriterioCompletion}
-          />
+          <div className="space-y-4">
+            {/* Notificação de configuração de e-mail */}
+            <EmailSetupNotification 
+              onConfigure={() => {
+                // Primeiro, mostrar o modal de configuração rápida
+                setShowEmailSetupModal(true);
+                // Alternativamente, pode ir direto para admin
+                // handleViewChange('admin');
+              }}
+            />
+            
+            <Dashboard
+              criterios={filteredCriterios}
+              alertas={alertas}
+              metricas={metricas}
+              onMarkAlertAsRead={handleMarkAlertAsRead}
+              user={user}
+              onToggleCompletion={handleToggleCriterioCompletion}
+            />
+          </div>
         );
       
       case 'criterios':
@@ -282,18 +353,13 @@ function AppContent() {
           <div className="space-y-6">
             <JardimBreadcrumb items={[{ label: 'Alertas' }]} />
             
-            <div className="bg-white rounded-lg p-6 shadow-sm border border-[var(--border)]">
-              <div className="flex items-center space-x-3 mb-4">
-                <JardimLogo />
-                <div>
-                  <h2 className="text-2xl font-bold text-[var(--jardim-green)]">Central de Alertas</h2>
-                  <p className="text-[var(--jardim-gray)]">
-                    Gerencie todos os alertas e notificações do sistema
-                  </p>
-                </div>
-              </div>
-              <AlertsPanel alertas={alertas} onMarkAsRead={handleMarkAlertAsRead} />
-            </div>
+            <AdvancedAlertsPanel 
+              alertas={alertas} 
+              onMarkAsRead={handleMarkAlertAsRead}
+              onMarkAllAsRead={handleMarkAllAlertsAsRead}
+              onDeleteAlert={handleDeleteAlert}
+              onArchiveAlert={handleArchiveAlert}
+            />
           </div>
         );
       
@@ -353,6 +419,16 @@ function AppContent() {
       <BackupNotification />
       <ToastDebugger />
       <DebugPanel />
+      
+      {/* Modal de configuração rápida de e-mail */}
+      {user?.role === 'admin' && (
+        <EmailQuickSetupModal 
+          isOpen={showEmailSetupModal}
+          onClose={() => setShowEmailSetupModal(false)}
+          showOnFirstVisit={true}
+        />
+      )}
+      
       <Toaster />
     </div>
   );
