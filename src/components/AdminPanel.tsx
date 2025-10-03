@@ -108,8 +108,10 @@ export const AdminPanel = () => {
     } else if (action === 'init-system') {
       setCurrentView('init-system');
     } else if (action === 'backup') {
+      console.log('[AdminPanel] Executando: setCurrentView(backup)');
       setCurrentView('backup');
     } else if (action === 'settings') {
+      console.log('[AdminPanel] Executando: setCurrentView(settings)');
       setCurrentView('settings');
     } else {
       // Em produção, navegaria para outras telas específicas
@@ -164,6 +166,7 @@ export const AdminPanel = () => {
   }
 
   if (currentView === 'backup') {
+    console.log('[AdminPanel] Renderizando view: backup');
     return (
       <div className="space-y-6">
         <div className="flex items-center space-x-4">
@@ -191,6 +194,7 @@ export const AdminPanel = () => {
   }
 
   if (currentView === 'settings') {
+    console.log('[AdminPanel] Renderizando view: settings');
     return (
       <div className="space-y-6">
         <div className="flex items-center space-x-4">
@@ -269,7 +273,11 @@ export const AdminPanel = () => {
               return (
                 <Card 
                   key={index} 
-                  className="cursor-pointer hover:shadow-lg transition-shadow"
+                  className={`cursor-pointer hover:shadow-lg transition-shadow ${
+                    action.action === 'settings' || action.action === 'backup' 
+                      ? 'border-2 border-red-500 bg-red-50' 
+                      : ''
+                  }`}
                   onClick={() => handleAction(action.action)}
                 >
                   <CardHeader>
@@ -285,7 +293,11 @@ export const AdminPanel = () => {
                             : 'text-blue-600'
                         }`} />
                       </div>
-                      <CardTitle className="text-base">{action.title}</CardTitle>
+                      <CardTitle className="text-base">
+                        {action.action === 'settings' || action.action === 'backup' ? '🔧 ' : ''}
+                        {action.title}
+                        {action.action === 'settings' || action.action === 'backup' ? ' [DEBUG]' : ''}
+                      </CardTitle>
                     </div>
                   </CardHeader>
                   <CardContent>
