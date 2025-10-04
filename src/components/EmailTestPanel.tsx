@@ -8,6 +8,7 @@ import { Badge } from './ui/badge';
 import { toast } from 'sonner@2.0.3';
 import { Mail, Send, CheckCircle, XCircle, AlertTriangle, Clock } from 'lucide-react';
 import { emailService, sendTestEmail } from '../lib/emailService';
+import { useEmailDebouncer } from './EmailDebouncer';
 import { TestModeEmailHelper } from './TestModeEmailHelper';
 import { EmailRateLimitHelper } from './EmailRateLimitHelper';
 
@@ -26,6 +27,7 @@ export function EmailTestPanel() {
   const [testEmail, setTestEmail] = useState('');
   const [isTesting, setIsTesting] = useState(false);
   const [lastResult, setLastResult] = useState<EmailTestResult | null>(null);
+  const { state: debouncerState, executeWithDebounce } = useEmailDebouncer();
 
   const handleQuickTest = async () => {
     if (!testEmail) {
@@ -41,47 +43,52 @@ export function EmailTestPanel() {
     setIsTesting(true);
     setLastResult(null);
 
-    try {
-      console.log('🧪 [EmailTestPanel] Iniciando teste rápido de e-mail...');
-      
-      const result = await sendTestEmail(testEmail);
-      
-      const testResult: EmailTestResult = {
-        success: true,
-        emailId: result.emailId,
-        message: result.message,
-        testMode: result.testMode,
-        authorizedEmail: result.authorizedEmail,
-        note: result.note,
-        timestamp: new Date().toISOString()
-      };
-      
-      setLastResult(testResult);
-      
-      if (result.testMode) {
-        toast.success(`✅ API Key configurada corretamente!`);
-        toast.info(`📧 Modo de teste: E-mails enviados para ${result.authorizedEmail}`);
-      } else {
-        toast.success(`✅ E-mail enviado para ${testEmail}!`);
+    await executeWithDebounce(
+      async () => {
+        console.log('🧪 [EmailTestPanel] Iniciando teste rápido de e-mail...');
+        return await sendTestEmail(testEmail);
+      },
+      (result) => {
+        // Sucesso
+        const testResult: EmailTestResult = {
+          success: true,
+          emailId: result.emailId,
+          message: result.message,
+          testMode: result.testMode,
+          authorizedEmail: result.authorizedEmail,
+          note: result.note,
+          timestamp: new Date().toISOString()
+        };
+        
+        setLastResult(testResult);
+        
+        if (result.testMode) {
+          toast.success(`✅ API Key configurada corretamente!`);
+          toast.info(`📧 Modo de teste: E-mails enviados para ${result.authorizedEmail}`);
+        } else {
+          toast.success(`✅ E-mail enviado para ${testEmail}!`);
+        }
+        
+        console.log('✅ [EmailTestPanel] Teste concluído com sucesso:', result);
+      },
+      (error) => {
+        // Erro (apenas para erros que não são de rate limit/debounce)
+        if (!error.message.includes('rate limit') && !error.message.includes('Aguarde')) {
+          console.error('❌ [EmailTestPanel] Erro no teste:', error);
+          
+          const testResult: EmailTestResult = {
+            success: false,
+            error: error.message,
+            timestamp: new Date().toISOString()
+          };
+          
+          setLastResult(testResult);
+          toast.error(`❌ Falha no teste: ${testResult.error}`);
+        }
       }
-      
-      console.log('✅ [EmailTestPanel] Teste concluído com sucesso:', result);
-      
-    } catch (error) {
-      console.error('❌ [EmailTestPanel] Erro no teste:', error);
-      
-      const testResult: EmailTestResult = {
-        success: false,
-        error: error instanceof Error ? error.message : 'Erro desconhecido',
-        timestamp: new Date().toISOString()
-      };
-      
-      setLastResult(testResult);
-      toast.error(`❌ Falha no teste: ${testResult.error}`);
-      
-    } finally {
-      setIsTesting(false);
-    }
+    );
+    
+    setIsTesting(false);
   };
 
   const handleTestAlert = async () => {

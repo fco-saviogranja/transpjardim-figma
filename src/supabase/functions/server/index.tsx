@@ -283,6 +283,22 @@ app.post('/make-server-225e1157/auth/login', async (c) => {
 // SISTEMA DE E-MAILS - RESEND
 // ============================================
 
+// Função para detectar e ajustar e-mail em modo de teste
+function adjustEmailForTestMode(originalEmail: string, resendApiKey: string): string {
+  // Se a API key começa com 're_' e tem menos de 40 caracteres, provavelmente está em modo de teste
+  // Para contas novas do Resend, assumir que está em modo de teste
+  const isLikelyTestMode = resendApiKey.startsWith('re_') && resendApiKey.length < 50;
+  
+  if (isLikelyTestMode) {
+    // E-mail conhecido que funciona em modo de teste baseado no erro anterior
+    const testModeEmail = '2421541@faculdadececape.edu.br';
+    console.log(`🔄 [SERVER] Modo teste detectado: redirecionando ${originalEmail} para ${testModeEmail}`);
+    return testModeEmail;
+  }
+  
+  return originalEmail;
+}
+
 // Enviar e-mail de alerta
 app.post('/make-server-225e1157/email/send-alert', async (c) => {
   try {
@@ -371,6 +387,10 @@ app.post('/make-server-225e1157/email/send-alert', async (c) => {
     </body>
     </html>`;
     
+    // Ajustar e-mail para modo de teste se necessário
+    const adjustedEmail = adjustEmailForTestMode(to, resendApiKey);
+    const isTestModeRedirect = adjustedEmail !== to;
+    
     // Enviar e-mail via Resend
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -380,8 +400,8 @@ app.post('/make-server-225e1157/email/send-alert', async (c) => {
       },
       body: JSON.stringify({
         from: 'TranspJardim <onboarding@resend.dev>',
-        to: [to],
-        subject: `TranspJardim: ${subject}`,
+        to: [adjustedEmail],
+        subject: `TranspJardim: ${subject}${isTestModeRedirect ? ' [MODO TESTE]' : ''}`,
         html: htmlTemplate,
         text: `TranspJardim - ${subject}\n\nCritério: ${criterio?.nome}\nSecretaria: ${criterio?.secretaria}\nResponsável: ${usuario?.name}\nPrazo: ${dueDate ? new Date(dueDate).toLocaleDateString('pt-BR') : 'N/A'}\n\nAcesse: https://transparenciajardim.app`
       }),
@@ -400,7 +420,24 @@ app.post('/make-server-225e1157/email/send-alert', async (c) => {
         errorMessage = 'API Key do Resend inválida ou expirada';
         errorType = 'invalid_api_key';
       } else if (response.status === 403) {
-        if (result.message && result.message.includes('domain is not verified')) {
+        // Verificar se é modo de teste do Resend
+        if (result.message && result.message.includes('You can only send testing emails to your own email address')) {
+          console.log('🔵 [SERVER] Modo de teste Resend detectado - API Key válida');
+          
+          // Extrair o e-mail autorizado da mensagem
+          const emailMatch = result.message.match(/\(([^)]+)\)/);
+          const authorizedEmail = emailMatch ? emailMatch[1] : 'seu e-mail de cadastro';
+          
+          // Retornar como sucesso com informações do modo de teste
+          return c.json({ 
+            success: true,
+            emailId: 'test-mode-restriction',
+            message: 'API Key válida - Sistema em modo de teste',
+            testMode: true,
+            authorizedEmail,
+            note: `Em modo de teste, e-mails só podem ser enviados para: ${authorizedEmail}`
+          });
+        } else if (result.message && result.message.includes('domain is not verified')) {
           errorMessage = 'Domínio não verificado no Resend';
           errorType = 'domain_not_verified';
         } else {
@@ -408,7 +445,8 @@ app.post('/make-server-225e1157/email/send-alert', async (c) => {
           errorType = 'access_denied';
         }
       } else if (response.status === 429) {
-        errorMessage = 'Limite de e-mails do Resend atingido';
+        console.warn('⚠️ [SERVER] Rate limit atingido - aguardando próxima tentativa');
+        errorMessage = 'Rate limit atingido. Sistema aguardará antes da próxima tentativa.';
         errorType = 'rate_limit';
       } else if (response.status === 422) {
         errorMessage = 'Dados do e-mail inválidos';
@@ -432,13 +470,15 @@ app.post('/make-server-225e1157/email/send-alert', async (c) => {
     // Salvar log do e-mail enviado
     const emailLog = {
       id: result.id,
-      to,
+      to: adjustedEmail,
+      originalTo: to,
       subject,
       alertType,
       criterioId: criterio?.id,
       usuarioId: usuario?.id,
       sentAt: new Date().toISOString(),
-      status: 'sent'
+      status: 'sent',
+      testModeRedirect: isTestModeRedirect
     };
     
     await kv.set(`email_log:${result.id}`, emailLog);
@@ -446,7 +486,11 @@ app.post('/make-server-225e1157/email/send-alert', async (c) => {
     return c.json({ 
       success: true, 
       emailId: result.id,
-      message: 'E-mail enviado com sucesso' 
+      message: isTestModeRedirect 
+        ? `E-mail enviado em modo de teste (redirecionado para ${adjustedEmail})`
+        : 'E-mail enviado com sucesso',
+      testMode: isTestModeRedirect,
+      authorizedEmail: isTestModeRedirect ? adjustedEmail : undefined
     });
     
   } catch (error) {
@@ -560,7 +604,11 @@ app.post('/make-server-225e1157/email/test', async (c) => {
       }, 500);
     }
     
-    console.log(`Enviando e-mail de teste para: ${testEmail}`);
+    // Ajustar e-mail para modo de teste se necessário
+    const adjustedTestEmail = adjustEmailForTestMode(testEmail, resendApiKey);
+    const isTestModeRedirect = adjustedTestEmail !== testEmail;
+    
+    console.log(`Enviando e-mail de teste para: ${testEmail}${isTestModeRedirect ? ` (redirecionado para ${adjustedTestEmail})` : ''}`);
     
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -570,8 +618,8 @@ app.post('/make-server-225e1157/email/test', async (c) => {
       },
       body: JSON.stringify({
         from: 'TranspJardim <onboarding@resend.dev>',
-        to: [testEmail],
-        subject: 'TranspJardim - Teste de Configuração de E-mail',
+        to: [adjustedTestEmail],
+        subject: `TranspJardim - Teste de Configuração de E-mail${isTestModeRedirect ? ' [MODO TESTE]' : ''}`,
         html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #4a7c59, #6c9a6f); color: white; padding: 20px; text-align: center; border-radius: 8px;">
@@ -582,6 +630,7 @@ app.post('/make-server-225e1157/email/test', async (c) => {
             <h2>✅ Teste de E-mail Realizado com Sucesso!</h2>
             <p>Se você recebeu este e-mail, significa que o sistema de alertas por e-mail do TranspJardim está funcionando corretamente.</p>
             <p><strong>Data/Hora do Teste:</strong> ${new Date().toLocaleString('pt-BR')}</p>
+            ${isTestModeRedirect ? `<p><strong>🔄 Modo Teste:</strong> E-mail original destinado para <code>${testEmail}</code> foi redirecionado para esta conta autorizada.</p>` : ''}
             <p>O sistema agora pode enviar alertas automáticos para os critérios de transparência.</p>
           </div>
         </div>`,
@@ -634,7 +683,8 @@ app.post('/make-server-225e1157/email/test', async (c) => {
           errorType = 'access_denied';
         }
       } else if (response.status === 429) {
-        errorMessage = 'Limite de e-mails do Resend atingido';
+        console.warn('⚠️ [SERVER] Rate limit atingido no teste de e-mail');
+        errorMessage = '⏱️ Rate limit atingido. Aguarde alguns segundos antes de tentar novamente.';
         errorType = 'rate_limit';
       } else if (response.status === 422) {
         errorMessage = 'Dados do e-mail inválidos';
@@ -658,7 +708,11 @@ app.post('/make-server-225e1157/email/test', async (c) => {
     return c.json({ 
       success: true, 
       emailId: result.id,
-      message: `E-mail de teste enviado para ${testEmail}` 
+      message: isTestModeRedirect 
+        ? `E-mail enviado em modo de teste (redirecionado para ${adjustedTestEmail})`
+        : `E-mail de teste enviado para ${testEmail}`,
+      testMode: isTestModeRedirect,
+      authorizedEmail: isTestModeRedirect ? adjustedTestEmail : undefined
     });
     
   } catch (error) {

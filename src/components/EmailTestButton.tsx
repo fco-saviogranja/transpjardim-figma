@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { Mail, Send, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { Mail, Send, CheckCircle, XCircle, AlertTriangle, Clock } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import { useEmailStatus } from '../hooks/useEmailStatusOptimized';
+import { useEmailDebouncer } from './EmailDebouncer';
 import { sendTestEmail } from '../lib/emailService';
 
 interface EmailTestButtonProps {
@@ -13,6 +14,7 @@ interface EmailTestButtonProps {
 export function EmailTestButton({ onShowConfig }: EmailTestButtonProps) {
   const [isTesting, setIsTesting] = useState(false);
   const { isConfigured: emailConfigured, status } = useEmailStatus();
+  const { state: debouncerState, executeWithDebounce } = useEmailDebouncer();
 
   const handleQuickTest = async () => {
     if (!emailConfigured) {
@@ -26,37 +28,48 @@ export function EmailTestButton({ onShowConfig }: EmailTestButtonProps) {
     const testEmail = 'admin@jardim.ce.gov.br'; // E-mail de teste padrão
     setIsTesting(true);
 
-    try {
-      console.log('🧪 [EmailTestButton] Enviando teste rápido...');
-      
-      const result = await sendTestEmail(testEmail);
-      
-      toast.success(`✅ E-mail de teste enviado para ${testEmail}!`, {
-        description: `ID: ${result.emailId}`,
-        duration: 5000
-      });
-      
-      console.log('✅ [EmailTestButton] Teste bem-sucedido:', result);
-      
-    } catch (error) {
-      console.error('❌ [EmailTestButton] Erro no teste:', error);
-      
-      toast.error(`❌ Falha no teste de e-mail`, {
-        description: error instanceof Error ? error.message : 'Erro desconhecido',
-        duration: 8000,
-        action: {
-          label: 'Configurar',
-          onClick: () => {
-            if (onShowConfig) {
-              onShowConfig();
-            }
-          }
+    await executeWithDebounce(
+      async () => {
+        return await sendTestEmail(testEmail);
+      },
+      (result) => {
+        // Sucesso
+        console.log('✅ [EmailTestButton] Teste bem-sucedido:', result);
+        
+        if (result.testMode) {
+          toast.success(`✅ E-mail enviado (modo teste)`, {
+            description: `Redirecionado para: ${result.authorizedEmail}`,
+            duration: 6000
+          });
+        } else {
+          toast.success(`✅ E-mail de teste enviado para ${testEmail}!`, {
+            description: `ID: ${result.emailId}`,
+            duration: 5000
+          });
         }
-      });
-      
-    } finally {
-      setIsTesting(false);
-    }
+      },
+      (error) => {
+        // Erro
+        console.error('❌ [EmailTestButton] Erro no teste:', error);
+        
+        if (!error.message.includes('rate limit') && !error.message.includes('Aguarde')) {
+          toast.error(`❌ Falha no teste de e-mail`, {
+            description: error.message || 'Erro desconhecido',
+            duration: 8000,
+            action: {
+              label: 'Configurar',
+              onClick: () => {
+                if (onShowConfig) {
+                  onShowConfig();
+                }
+              }
+            }
+          });
+        }
+      }
+    );
+    
+    setIsTesting(false);
   };
 
   const getStatusColor = () => {
@@ -90,13 +103,18 @@ export function EmailTestButton({ onShowConfig }: EmailTestButtonProps) {
         size="sm"
         variant={emailConfigured ? "default" : "outline"}
         onClick={emailConfigured ? handleQuickTest : onShowConfig}
-        disabled={isTesting}
+        disabled={isTesting || debouncerState.isProcessing || Date.now() < debouncerState.cooldownUntil}
         className={emailConfigured ? "" : "border-amber-300 text-amber-700 hover:bg-amber-50"}
       >
-        {isTesting ? (
+        {isTesting || debouncerState.isProcessing ? (
           <>
             <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white mr-2"></div>
             Testando...
+          </>
+        ) : Date.now() < debouncerState.cooldownUntil ? (
+          <>
+            <Clock className="h-3 w-3 mr-2" />
+            Aguarde...
           </>
         ) : emailConfigured ? (
           <>

@@ -160,14 +160,16 @@ export function useEmailStatus(): EmailStatusHook {
     }
   }, [isChecking]);
 
-  // Verificação inicial apenas se nunca verificou ou há mais de 10 minutos
+  // Verificação inicial apenas se nunca verificou ou há mais de 15 minutos (otimizado)
   useEffect(() => {
-    if (!globalLastCheck || (new Date().getTime() - globalLastCheck.getTime()) > 10 * 60 * 1000) {
+    const needsCheck = !globalLastCheck || (new Date().getTime() - globalLastCheck.getTime()) > 15 * 60 * 1000;
+    
+    if (needsCheck && !isGlobalChecking) {
       const timer = setTimeout(() => {
-        if (mountedRef.current) {
+        if (mountedRef.current && !isGlobalChecking) {
           checkStatus();
         }
-      }, 1000); // Aguardar 1 segundo antes da primeira verificação
+      }, 2000); // Aguardar 2 segundos antes da primeira verificação
       
       return () => clearTimeout(timer);
     } else {
@@ -176,7 +178,7 @@ export function useEmailStatus(): EmailStatusHook {
       setError(globalError);
       setLastCheck(globalLastCheck);
     }
-  }, []);
+  }, []); // Remove dependências para evitar loops
 
   const isConfigured = status === 'configured';
 

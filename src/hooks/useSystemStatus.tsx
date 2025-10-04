@@ -44,6 +44,16 @@ export const SystemStatusProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    // Verificar se já foi verificado recentemente (menos de 1 minuto)
+    if (status.lastChecked) {
+      const lastCheck = new Date(status.lastChecked);
+      const now = new Date();
+      if ((now.getTime() - lastCheck.getTime()) < 60000) {
+        console.log('⏳ Verificação recente, pulando...');
+        return;
+      }
+    }
+
     console.log('🔍 Iniciando verificação de status do sistema...');
     setStatus(prev => ({ ...prev, checking: true, error: null }));
     
@@ -91,17 +101,17 @@ export const SystemStatusProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   
-  // Verificação inicial (apenas uma vez)
+  // Verificação inicial (apenas uma vez, otimizada)
   useEffect(() => {
     if (!status.initialized && !status.checking) {
       const timer = setTimeout(() => {
         console.log('🚀 Iniciando verificação inicial do sistema...');
         checkStatus();
-      }, 1500); // Aguardar 1.5s para evitar conflitos com outros componentes
+      }, 3000); // Aguardar 3s para evitar conflitos
       
       return () => clearTimeout(timer);
     }
-  }, [status.initialized, status.checking]);
+  }, []); // Remove dependências para evitar loops
   
   const contextValue = {
     status,

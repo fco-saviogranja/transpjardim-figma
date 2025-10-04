@@ -11,27 +11,16 @@ https://vercel.com/dashboard
 - Clique no projeto recém-criado
 - Vá em **Settings** > **Environment Variables**
 
-### 3. Adicione as Variáveis (uma por vez)
+### 3. Adicione APENAS a Variável Obrigatória
 
-#### 🗄️ **Supabase Database**
-```
-Nome: VITE_SUPABASE_URL
-Valor: https://[SEU-PROJECT-ID].supabase.co
-Environments: Production, Preview, Development
-```
-
-```
-Nome: VITE_SUPABASE_ANON_KEY  
-Valor: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9... (sua chave anon)
-Environments: Production, Preview, Development
-```
-
-#### 📧 **Resend Email API**
+#### 📧 **Resend Email API (Obrigatório)**
 ```
 Nome: VITE_RESEND_API_KEY
 Valor: re_[SUA-CHAVE-RESEND]
 Environments: Production, Preview, Development
 ```
+
+**✅ Observação:** O Supabase já está configurado diretamente no código. Não é necessário adicionar variáveis de ambiente para ele.
 
 ### 4. Redeploy Automático
 - Após adicionar as variáveis, o Vercel fará redeploy automático

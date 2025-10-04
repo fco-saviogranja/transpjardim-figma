@@ -5,6 +5,7 @@ import { Badge } from './ui/badge';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Mail, ExternalLink, CheckCircle, AlertTriangle, X } from 'lucide-react';
 import { QuickSetupGuide } from './QuickSetupGuide';
+import { EmailTestModeHandler } from './EmailTestModeHandler';
 import { useEmailStatus } from '../hooks/useEmailStatusOptimized';
 
 interface EmailQuickSetupModalProps {
@@ -85,6 +86,9 @@ export function EmailQuickSetupModal({ isOpen, onClose, showOnFirstVisit = false
               </ul>
             </AlertDescription>
           </Alert>
+
+          {/* Handler para modo de teste */}
+          <EmailTestModeHandler />
 
           {/* Guia de configuração */}
           <QuickSetupGuide onComplete={handleClose} />

@@ -43,15 +43,15 @@ Quando o Vercel perguntar:
 1. Acesse https://vercel.com/dashboard
 2. Clique no projeto **transpjardim**
 3. Settings > Environment Variables
-4. Adicione uma por vez:
+4. Adicione **APENAS** a variável obrigatória:
 
 ```
-VITE_SUPABASE_URL = https://[seu-project-id].supabase.co
-VITE_SUPABASE_ANON_KEY = [sua-chave-anon]
-VITE_RESEND_API_KEY = [sua-chave-resend]
+VITE_RESEND_API_KEY = re_[sua-chave-resend]
 ```
 
 ⚠️ **Marque todas as 3 opções:** Production, Preview, Development
+
+**✅ Observação:** O Supabase já está configurado no código (não precisa de variáveis).
 
 ### **Passo 5: Domínio Customizado (Opcional)**
 1. Settings > Domains

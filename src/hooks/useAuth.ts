@@ -29,10 +29,15 @@ export const useAuthProvider = () => {
   const supabase = useSupabase();
 
   useEffect(() => {
-    const { user: storedUser, token: storedToken } = getStoredAuth();
-    setUser(storedUser);
-    setToken(storedToken);
-    setLoading(false);
+    try {
+      const { user: storedUser, token: storedToken } = getStoredAuth();
+      setUser(storedUser);
+      setToken(storedToken);
+    } catch (error) {
+      console.warn('Erro ao carregar autenticação:', error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {

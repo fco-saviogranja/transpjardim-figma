@@ -1,43 +1,27 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { AuthProvider } from './components/AuthProvider';
-import { SystemStatusProvider } from './hooks/useSystemStatus';
 import { LoginForm } from './components/LoginForm';
 import { JardimHeader } from './components/JardimHeader';
 import { JardimFooter } from './components/JardimFooter';
 import { JardimBreadcrumb } from './components/JardimBreadcrumb';
 import { Dashboard } from './components/Dashboard';
 import { CriteriosList } from './components/CriteriosList';
-import { CriteriosChart } from './components/CriteriosChart';
-import { AlertsPanel } from './components/AlertsPanel';
 import { AdvancedAlertsPanel } from './components/AdvancedAlertsPanel';
-import { useAlertManager } from './hooks/useAlertManager';
 import { AdminPanel } from './components/AdminPanel';
 import { AdvancedMetrics } from './components/AdvancedMetrics';
-import { SystemHealthMonitor } from './components/SystemHealthMonitor';
-import { SimpleStatusNotification } from './components/SimpleStatusNotification';
-import { BackupNotification } from './components/BackupNotification';
-import { DebugPanel } from './components/DebugPanel';
-import { ToastDebugger } from './components/ToastDebugger';
-import { EmailSetupNotification } from './components/EmailSetupNotification';
-import { EmailQuickSetupModal } from './components/EmailQuickSetupModal';
-import { useEmailStatus } from './hooks/useEmailStatusOptimized';
 import { Toaster } from './components/ui/sonner';
 import { JardimLogo } from './components/JardimLogo';
 import { useAuth } from './hooks/useAuth';
 import { mockCriterios, mockAlertas, mockMetricas } from './lib/mockData';
 import { Alerta, Criterio, Metricas } from './types';
-import './utils/debug'; // Carregar debug utils
-import './utils/authTest'; // Carregar testes de autenticação
 
 function AppContent() {
   const { isAuthenticated, loading, user } = useAuth();
   
-  // Inicializar currentView com valor do localStorage ou 'dashboard' como fallback
-  // Isso permite que a navegação seja mantida mesmo após atualizar a página (F5)
+  // Estado inicial
   const [currentView, setCurrentView] = useState(() => {
     if (typeof window !== 'undefined') {
       const savedView = localStorage.getItem('transpjardim-current-view');
-      // Validar se a view salva é válida
       const validViews = ['dashboard', 'criterios', 'alertas', 'admin', 'relatorios'];
       return validViews.includes(savedView || '') ? savedView : 'dashboard';
     }
@@ -46,126 +30,80 @@ function AppContent() {
   
   const [alertas, setAlertas] = useState<Alerta[]>(mockAlertas);
   const [criterios, setCriterios] = useState<Criterio[]>(() => 
-    // Garantir que todos os critérios tenham meta 100
     mockCriterios.map(criterio => ({ ...criterio, meta: 100 }))
   );
   const [metricas, setMetricas] = useState<Metricas>(mockMetricas);
-  
-  // Estado para modal de configuração de e-mail
-  const [showEmailSetupModal, setShowEmailSetupModal] = useState(false);
-  
-  // Hook para verificar status do e-mail
-  const { isConfigured: emailConfigured, status: emailStatus } = useEmailStatus();
 
-  // Mostrar modal de configuração de e-mail automaticamente para admins
-  useEffect(() => {
-    if (user?.role === 'admin' && emailStatus === 'not_configured') {
-      const hasShownModal = localStorage.getItem('transpjardim-email-modal-shown') === 'true';
-      
-      if (!hasShownModal) {
-        // Aguardar um pouco antes de mostrar o modal
-        const timer = setTimeout(() => {
-          if (emailStatus === 'not_configured') {
-            setShowEmailSetupModal(true);
-            localStorage.setItem('transpjardim-email-modal-shown', 'true');
-          }
-        }, 8000); // 8 segundos de delay para dar tempo da verificação
-        
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [user, emailStatus]); // Remover emailConfigured para evitar loops
-
-  // Sistema automático de geração de alertas
-  const handleNewAlert = useCallback((novoAlerta: Alerta) => {
-    setAlertas(prev => [novoAlerta, ...prev]);
-  }, []);
-
-  const { 
-    rules: alertRules, 
-    config: alertConfig, 
-    lastCheck: alertLastCheck,
-    alertHistory,
-    manualCheck: manualAlertCheck
-  } = useAlertManager(criterios, handleNewAlert);
-
-  // Função para mudar view e persistir no localStorage
+  // Navegação
   const handleViewChange = useCallback((newView: string) => {
-    // Validar se a view é válida e se o usuário tem permissão
     const validViews = ['dashboard', 'criterios', 'alertas', 'admin', 'relatorios'];
-    if (!validViews.includes(newView)) {
-      console.warn(`View inválida: ${newView}`);
-      return;
-    }
+    if (!validViews.includes(newView)) return;
     
-    // Verificar permissão para admin
-    if (newView === 'admin' && user?.role !== 'admin') {
-      console.warn('Acesso negado: apenas administradores podem acessar o painel admin');
-      return;
-    }
-    
-    // Verificar permissão para relatórios (apenas admin por enquanto)
-    if (newView === 'relatorios' && user?.role !== 'admin') {
-      console.warn('Acesso negado: apenas administradores podem acessar relatórios avançados');
-      return;
-    }
+    if ((newView === 'admin' || newView === 'relatorios') && user?.role !== 'admin') return;
     
     setCurrentView(newView);
     if (typeof window !== 'undefined') {
       localStorage.setItem('transpjardim-current-view', newView);
     }
-  }, [user]);
+  }, [user?.role]);
 
-  // Verificar se a view atual é válida quando o usuário mudar (apenas uma vez)
+  // Verificar permissões uma única vez
   useEffect(() => {
     if (user && currentView === 'admin' && user.role !== 'admin') {
-      // Se usuário não é admin mas está na página admin, redirecionar para dashboard
       setCurrentView('dashboard');
       if (typeof window !== 'undefined') {
         localStorage.setItem('transpjardim-current-view', 'dashboard');
       }
     }
-  }, [user]); // Só roda quando o usuário mudar
+  }, [user]);
 
-  // Carregar completions do localStorage quando o usuário mudar
+  // Carregar completions uma única vez
   useEffect(() => {
-    if (user && typeof window !== 'undefined') {
-      const storageKey = `transpjardim-user-completions-${user.id}`;
-      const savedCompletions = JSON.parse(localStorage.getItem(storageKey) || '{}');
-      
-      // Aplicar completions salvos aos critérios
-      setCriterios(prev => 
-        prev.map(criterio => {
-          const savedCompletion = savedCompletions[criterio.id];
-          if (savedCompletion) {
-            return {
-              ...criterio,
-              conclusoesPorUsuario: {
-                ...criterio.conclusoesPorUsuario,
-                [user.id]: savedCompletion
+    if (user?.id && typeof window !== 'undefined') {
+      try {
+        const storageKey = `transpjardim-user-completions-${user.id}`;
+        const savedCompletions = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        
+        if (Object.keys(savedCompletions).length > 0) {
+          setCriterios(prev => 
+            prev.map(criterio => {
+              const savedCompletion = savedCompletions[criterio.id];
+              if (savedCompletion) {
+                return {
+                  ...criterio,
+                  conclusoesPorUsuario: {
+                    ...criterio.conclusoesPorUsuario,
+                    [user.id]: savedCompletion
+                  }
+                };
               }
-            };
-          }
-          return criterio;
-        })
-      );
+              return criterio;
+            })
+          );
+        }
+      } catch (error) {
+        console.warn('Erro ao carregar completions:', error);
+      }
     }
-  }, [user]); // Só roda quando o usuário mudar
+  }, [user?.id]);
+
+  // Handlers
+  const handleNewAlert = useCallback((novoAlerta: Alerta) => {
+    setAlertas(prev => [novoAlerta, ...prev]);
+  }, []);
 
   const handleMarkAlertAsRead = useCallback((alertaId: string) => {
     setAlertas(prev => 
       prev.map(alerta => 
         alerta.id === alertaId 
-          ? { ...alerta, lido: !alerta.lido } // Toggle read/unread
+          ? { ...alerta, lido: !alerta.lido }
           : alerta
       )
     );
   }, []);
 
   const handleMarkAllAlertsAsRead = useCallback(() => {
-    setAlertas(prev => 
-      prev.map(alerta => ({ ...alerta, lido: true }))
-    );
+    setAlertas(prev => prev.map(alerta => ({ ...alerta, lido: true })));
   }, []);
 
   const handleDeleteAlert = useCallback((alertaId: string) => {
@@ -173,64 +111,15 @@ function AppContent() {
   }, []);
 
   const handleArchiveAlert = useCallback((alertaId: string) => {
-    // Para este exemplo, arquivar é igual a marcar como lido
-    // Em uma implementação completa, poderia mover para uma tabela de arquivos
     handleMarkAlertAsRead(alertaId);
   }, [handleMarkAlertAsRead]);
-
-  const alertasNaoLidos = useMemo(() => alertas.filter(a => !a.lido), [alertas]);
-
-  // Filtrar critérios baseado na secretaria do usuário (memoizado)
-  const filteredCriterios = useMemo(() => {
-    if (!user) return [];
-    
-    // Admin vê todos os critérios
-    if (user.role === 'admin') {
-      return criterios;
-    }
-    
-    // Usuário padrão vê apenas critérios da sua secretaria
-    if (user.secretaria) {
-      return criterios.filter(criterio => criterio.secretaria === user.secretaria);
-    }
-    
-    return [];
-  }, [user, criterios]);
-
-  // Calcular métricas (memoizado)
-  const calculatedMetricas = useMemo(() => {
-    const criteriosConcluidos = user ? filteredCriterios.filter(c => 
-      c.conclusoesPorUsuario?.[user.id]?.concluido
-    ).length : 0;
-
-    return {
-      totalCriterios: filteredCriterios.length,
-      ativas: filteredCriterios.filter(c => c.status === 'ativo').length,
-      pendentes: filteredCriterios.filter(c => c.status === 'pendente').length,
-      vencidas: filteredCriterios.filter(c => c.status === 'vencido').length,
-      percentualCumprimento: filteredCriterios.length > 0 
-        ? Math.round(filteredCriterios.reduce((acc, c) => acc + (c.valor / c.meta), 0) / filteredCriterios.length * 100)
-        : 0,
-      alertasAtivos: alertasNaoLidos.length,
-      criteriosConcluidos,
-      percentualConclusao: filteredCriterios.length > 0 
-        ? Math.round((criteriosConcluidos / filteredCriterios.length) * 100)
-        : 0
-    };
-  }, [filteredCriterios, alertasNaoLidos.length, user]);
-
-  // Atualizar métricas quando calculatedMetricas mudar
-  useEffect(() => {
-    setMetricas(calculatedMetricas);
-  }, [calculatedMetricas]);
 
   const handleAddCriterio = useCallback((criterioData: Omit<Criterio, 'id'>) => {
     const newCriterio: Criterio = {
       ...criterioData,
-      meta: 100, // Garantir meta fixa de 100%
-      id: Date.now().toString() // Em produção, seria gerado pelo backend
+      meta: 100,
+      id: Date.now().toString()
     };
-    
     setCriterios(prev => [...prev, newCriterio]);
   }, []);
 
@@ -238,7 +127,7 @@ function AppContent() {
     setCriterios(prev => 
       prev.map(criterio => 
         criterio.id === id 
-          ? { ...criterioData, meta: 100, id } // Garantir meta fixa de 100%
+          ? { ...criterioData, meta: 100, id }
           : criterio
       )
     );
@@ -247,33 +136,30 @@ function AppContent() {
   const handleDeleteCriterio = useCallback((id: string) => {
     setCriterios(prev => prev.filter(criterio => criterio.id !== id));
     
-    // Limpar completions do localStorage para este critério
-    if (user && typeof window !== 'undefined') {
-      const storageKey = `transpjardim-user-completions-${user.id}`;
-      const existingCompletions = JSON.parse(localStorage.getItem(storageKey) || '{}');
-      delete existingCompletions[id];
-      localStorage.setItem(storageKey, JSON.stringify(existingCompletions));
+    if (user?.id && typeof window !== 'undefined') {
+      try {
+        const storageKey = `transpjardim-user-completions-${user.id}`;
+        const existingCompletions = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        delete existingCompletions[id];
+        localStorage.setItem(storageKey, JSON.stringify(existingCompletions));
+      } catch (error) {
+        console.warn('Erro ao limpar completion:', error);
+      }
     }
-  }, [user]);
+  }, [user?.id]);
 
   const handleToggleCriterioCompletion = useCallback((criterioId: string, completed: boolean) => {
-    if (!user) return;
+    if (!user?.id) return;
     
     setCriterios(prev => 
       prev.map(criterio => {
         if (criterio.id === criterioId) {
           const updatedConclusoes = { ...criterio.conclusoesPorUsuario };
           
-          if (completed) {
-            updatedConclusoes[user.id] = {
-              concluido: true,
-              dataConclusao: new Date().toISOString()
-            };
-          } else {
-            updatedConclusoes[user.id] = {
-              concluido: false
-            };
-          }
+          updatedConclusoes[user.id] = {
+            concluido: completed,
+            dataConclusao: completed ? new Date().toISOString() : undefined
+          };
           
           return {
             ...criterio,
@@ -284,15 +170,73 @@ function AppContent() {
       })
     );
     
-    // Persistir no localStorage (fallback quando Supabase não disponível)
-    const storageKey = `transpjardim-user-completions-${user.id}`;
-    const existingCompletions = JSON.parse(localStorage.getItem(storageKey) || '{}');
-    existingCompletions[criterioId] = {
-      concluido: completed,
-      dataConclusao: completed ? new Date().toISOString() : undefined
+    // Persistir no localStorage
+    try {
+      const storageKey = `transpjardim-user-completions-${user.id}`;
+      const existingCompletions = JSON.parse(localStorage.getItem(storageKey) || '{}');
+      existingCompletions[criterioId] = {
+        concluido: completed,
+        dataConclusao: completed ? new Date().toISOString() : undefined
+      };
+      localStorage.setItem(storageKey, JSON.stringify(existingCompletions));
+    } catch (error) {
+      console.warn('Erro ao salvar completion:', error);
+    }
+  }, [user?.id]);
+
+  // Cálculos simples
+  const alertasNaoLidos = useMemo(() => alertas.filter(a => !a.lido), [alertas]);
+
+  const filteredCriterios = useMemo(() => {
+    if (!user?.id) return [];
+    
+    if (user.role === 'admin') {
+      return criterios;
+    }
+    
+    if (user.secretaria) {
+      return criterios.filter(criterio => criterio.secretaria === user.secretaria);
+    }
+    
+    return [];
+  }, [user?.id, user?.role, user?.secretaria, criterios]);
+
+  const calculatedMetricas = useMemo(() => {
+    if (!user?.id || filteredCriterios.length === 0) {
+      return {
+        totalCriterios: 0,
+        ativas: 0,
+        pendentes: 0,
+        vencidas: 0,
+        percentualCumprimento: 0,
+        alertasAtivos: alertasNaoLidos.length,
+        criteriosConcluidos: 0,
+        percentualConclusao: 0
+      };
+    }
+
+    const criteriosConcluidos = filteredCriterios.filter(c => 
+      c.conclusoesPorUsuario?.[user.id]?.concluido
+    ).length;
+
+    return {
+      totalCriterios: filteredCriterios.length,
+      ativas: filteredCriterios.filter(c => c.status === 'ativo').length,
+      pendentes: filteredCriterios.filter(c => c.status === 'pendente').length,
+      vencidas: filteredCriterios.filter(c => c.status === 'vencido').length,
+      percentualCumprimento: filteredCriterios.length > 0 ? Math.round(
+        filteredCriterios.reduce((acc, c) => acc + (c.valor / c.meta), 0) / filteredCriterios.length * 100
+      ) : 0,
+      alertasAtivos: alertasNaoLidos.length,
+      criteriosConcluidos,
+      percentualConclusao: filteredCriterios.length > 0 ? Math.round((criteriosConcluidos / filteredCriterios.length) * 100) : 0
     };
-    localStorage.setItem(storageKey, JSON.stringify(existingCompletions));
-  }, [user]);
+  }, [filteredCriterios, alertasNaoLidos, user?.id]);
+
+  // Atualizar métricas
+  useEffect(() => {
+    setMetricas(calculatedMetricas);
+  }, [calculatedMetricas]);
 
   if (loading) {
     return (
@@ -313,26 +257,14 @@ function AppContent() {
     switch (currentView) {
       case 'dashboard':
         return (
-          <div className="space-y-4">
-            {/* Notificação de configuração de e-mail */}
-            <EmailSetupNotification 
-              onConfigure={() => {
-                // Primeiro, mostrar o modal de configuração rápida
-                setShowEmailSetupModal(true);
-                // Alternativamente, pode ir direto para admin
-                // handleViewChange('admin');
-              }}
-            />
-            
-            <Dashboard
-              criterios={filteredCriterios}
-              alertas={alertas}
-              metricas={metricas}
-              onMarkAlertAsRead={handleMarkAlertAsRead}
-              user={user}
-              onToggleCompletion={handleToggleCriterioCompletion}
-            />
-          </div>
+          <Dashboard
+            criterios={filteredCriterios}
+            alertas={alertas}
+            metricas={metricas}
+            onMarkAlertAsRead={handleMarkAlertAsRead}
+            user={user}
+            onToggleCompletion={handleToggleCriterioCompletion}
+          />
         );
       
       case 'criterios':
@@ -346,7 +278,6 @@ function AppContent() {
             onToggleCompletion={handleToggleCriterioCompletion}
           />
         );
-      
 
       case 'alertas':
         return (
@@ -414,21 +345,6 @@ function AppContent() {
       </main>
 
       <JardimFooter />
-      <SystemHealthMonitor />
-      <SimpleStatusNotification />
-      <BackupNotification />
-      <ToastDebugger />
-      <DebugPanel />
-      
-      {/* Modal de configuração rápida de e-mail */}
-      {user?.role === 'admin' && (
-        <EmailQuickSetupModal 
-          isOpen={showEmailSetupModal}
-          onClose={() => setShowEmailSetupModal(false)}
-          showOnFirstVisit={true}
-        />
-      )}
-      
       <Toaster />
     </div>
   );
@@ -436,10 +352,8 @@ function AppContent() {
 
 export default function App() {
   return (
-    <SystemStatusProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </SystemStatusProvider>
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
