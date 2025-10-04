@@ -63,7 +63,6 @@
           "build": "vite build",
 	  "preview": "vite preview",
 	  "deploy:vercel": "vercel --prod",
-	  "buildCommand": "npm run build",
   	  "outputDirectory": "dist"
       }
   }
