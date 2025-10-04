@@ -60,14 +60,10 @@
       },
       "scripts": {
           "dev": "vite",
-          "build": "vite build"
+          "build": "vite build",
 	  "preview": "vite preview",
-	  "deploy:vercel": "vercel --prod"
+	  "deploy:vercel": "vercel --prod",
+	  "buildCommand": "npm run build",
+  	  "outputDirectory": "dist"
       }
   }
-
-"scripts": {
-  "dev": "vite",
-  "build": "vite build",
- 
-}
