@@ -1,10 +1,13 @@
-import { User, Menu, X, Home, FileText, Bell, Settings, BarChart3, Eye, Accessibility, Phone, Mail, AlertTriangle } from 'lucide-react';
+import { User, Menu, X, Home, FileText, Bell, Settings, BarChart3, Eye, Accessibility, Phone, AlertTriangle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { JardimLogo } from './JardimLogo';
-import { useEmailStatus } from '../hooks/useEmailStatusOptimized';
+// import { useEmailStatus } from '../hooks/useEmailStatusOptimized'; // Removido para evitar testes automáticos
+import { SystemStatusIndicator } from './SystemStatusIndicator';
+import { ImageWithFallback } from './figma/ImageWithFallback';
+import logoRedonda from 'figma:asset/f6a9869d371560fae8a34486a3ae60bdf404d376.png';
 
 interface JardimHeaderProps {
   currentView: string;
@@ -15,7 +18,8 @@ interface JardimHeaderProps {
 export function JardimHeader({ currentView, onViewChange, alertCount = 0 }: JardimHeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, logout } = useAuth();
-  const { isConfigured: emailConfigured } = useEmailStatus();
+  // Remover verificação automática de e-mail para evitar testes desnecessários
+  // const { isConfigured: emailConfigured } = useEmailStatus();
 
   const navigation = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
@@ -47,17 +51,29 @@ export function JardimHeader({ currentView, onViewChange, alertCount = 0 }: Jard
                 <span>Ouvidoria</span>
               </span>
             </div>
-            <div className="flex items-center space-x-2">
-              <User className="h-4 w-4" />
-              <span className="hidden sm:inline">{user?.nome}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={logout}
-                className="text-white hover:bg-white/20 p-1 h-auto"
-              >
-                Sair
-              </Button>
+            <div className="flex items-center space-x-3">
+              {/* Indicador de status da conexão */}
+              <div className="flex items-center space-x-1">
+                <div className={`w-2 h-2 rounded-full ${navigator.onLine ? 'bg-green-300' : 'bg-yellow-300'}`}></div>
+                <span className="text-xs hidden md:inline">
+                  {navigator.onLine ? 'Online' : 'Local'}
+                </span>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2">
+                  <User className="h-4 w-4" />
+                  <span className="text-sm">{user?.name || 'Usuário'}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={logout}
+                  className="text-white hover:bg-white/20 p-1 h-auto"
+                >
+                  Sair
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -70,14 +86,26 @@ export function JardimHeader({ currentView, onViewChange, alertCount = 0 }: Jard
             {/* Logo e título */}
             <div className="flex items-center space-x-4">
               <div className="flex items-center">
-                {/* Logo horizontal oficial da Prefeitura de Jardim - desktop */}
+                {/* Logo oficial da Prefeitura de Jardim - desktop */}
                 <div className="hidden lg:block">
-                  <JardimLogo variant="rectangular" className="h-12 w-auto max-w-sm" alt="Governo Municipal de Jardim - CE" />
+                  <div className="jardim-header-logo rounded-lg p-2">
+                    <JardimLogo variant="rectangular" className="h-15 w-auto max-w-sm" alt="Prefeitura de Jardim - CE" forceTransparent={true} />
+                  </div>
                 </div>
                 
-                {/* Logo redonda + título - mobile e tablet */}
+                {/* Logo + título - mobile e tablet */}
                 <div className="lg:hidden flex items-center">
-                  <JardimLogo variant="round" className="w-12 h-12 mr-3 flex-shrink-0" />
+                  <div className="jardim-header-logo rounded-full p-1 mr-3">
+                    <ImageWithFallback 
+                      src={logoRedonda}
+                      alt="Prefeitura de Jardim - CE"
+                      className="w-12 h-12 object-contain rounded-full"
+                      style={{ 
+                        filter: 'drop-shadow(0 2px 4px rgba(255,255,255,0.1)) brightness(1.05) contrast(1.05)',
+                        background: 'transparent'
+                      }}
+                    />
+                  </div>
                   <div>
                     <h1 className="transpjardim-title transpjardim-title-medium">
                       TranspJardim
@@ -100,23 +128,7 @@ export function JardimHeader({ currentView, onViewChange, alertCount = 0 }: Jard
               </div>
             </div>
 
-            {/* Indicador de status de e-mail */}
-            {user?.role === 'admin' && !emailConfigured && (
-              <div className="hidden lg:flex items-center mr-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onViewChange('admin')}
-                  className="bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100"
-                >
-                  <Mail className="h-4 w-4 mr-2" />
-                  <span className="hidden xl:inline">Configurar E-mail</span>
-                  <Badge variant="destructive" className="ml-2 bg-red-500">
-                    !
-                  </Badge>
-                </Button>
-              </div>
-            )}
+            {/* E-mail status indicator removed to prevent automatic email tests */}
 
             {/* Navegação desktop */}
             <nav className="hidden lg:flex items-center space-x-1">

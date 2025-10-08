@@ -44,46 +44,64 @@ export const useAuthProvider = () => {
     try {
       console.log(`Tentando login para usuário: ${username}`);
       
-      // Primeiro, tentar autenticação mock (mais confiável)
+      // Sempre tentar autenticação mock primeiro (mais confiável e rápida)
       const validatedUser = validateLogin(username, password);
       
       if (validatedUser) {
-        console.log(`Login mock bem-sucedido para: ${username}`);
+        console.log(`✅ Login mock bem-sucedido para: ${username}`);
         const newToken = generateMockToken(validatedUser);
         
         setUser(validatedUser);
         setToken(newToken);
         setStoredAuth(validatedUser, newToken);
         
-        return true;
-      }
-      
-      // Se mock falhou, tentar Supabase
-      console.log(`Login mock falhou, tentando Supabase para: ${username}`);
-      const supabaseResponse = await supabase.login(username, password);
-      
-      if (supabaseResponse.success && supabaseResponse.data) {
-        console.log(`Login Supabase bem-sucedido para: ${username}`);
-        const { user: supabaseUser, token: supabaseToken } = supabaseResponse.data;
-        
-        setUser(supabaseUser);
-        setToken(supabaseToken);
-        setStoredAuth(supabaseUser, supabaseToken);
+        // Notificar usuário de que está usando sistema local
+        setTimeout(async () => {
+          const { toast } = await import('sonner@2.0.3');
+          toast.success('🎯 Login realizado com sucesso!', {
+            description: `Bem-vindo, ${validatedUser.name}! Sistema funcionando em modo local.`,
+            duration: 4000
+          });
+        }, 100);
         
         return true;
       }
       
-      console.log(`Ambos os métodos de login falharam para: ${username}`);
+      // Se mock falhou, tentar Supabase apenas se online
+      if (navigator.onLine) {
+        console.log(`🔄 Login mock falhou, tentando Supabase para: ${username}`);
+        try {
+          const supabaseResponse = await supabase.login(username, password);
+          
+          if (supabaseResponse.success && supabaseResponse.data) {
+            console.log(`✅ Login Supabase bem-sucedido para: ${username}`);
+            const { user: supabaseUser, token: supabaseToken } = supabaseResponse.data;
+            
+            setUser(supabaseUser);
+            setToken(supabaseToken);
+            setStoredAuth(supabaseUser, supabaseToken);
+            
+            return true;
+          }
+        } catch (supabaseError) {
+          console.warn('⚠️ Erro no Supabase, continuando com mock apenas:', supabaseError);
+          // Não retornar erro, apenas continuar
+        }
+      } else {
+        console.log('📱 Sem conexão, usando apenas validação mock');
+      }
+      
+      console.log(`❌ Falha na autenticação para: ${username}`);
       return false;
     } catch (error) {
-      console.error('Erro no login:', error);
+      console.error('❌ Erro crítico no login:', error);
       
-      // Em caso de erro crítico, tentar mock como último recurso
-      console.log(`Erro crítico no login, tentando mock como último recurso para: ${username}`);
+      // Sempre tentar mock como último recurso
+      console.log(`🚨 Erro crítico, usando mock de emergência para: ${username}`);
       const validatedUser = validateLogin(username, password);
       
       if (validatedUser) {
-        console.log(`Login de emergência bem-sucedido para: ${username}`);
+        console.log(`✅ Login de emergência bem-sucedido para: ${username}`);
         const newToken = generateMockToken(validatedUser);
         
         setUser(validatedUser);
@@ -93,7 +111,7 @@ export const useAuthProvider = () => {
         return true;
       }
       
-      console.log(`Falha total no login para: ${username}`);
+      console.log(`❌ Falha completa no login para: ${username}`);
       return false;
     }
   };

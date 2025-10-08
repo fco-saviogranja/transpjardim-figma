@@ -139,7 +139,8 @@ app.post('/make-server-225e1157/init-data', async (c) => {
         name: 'Administrador Sistema',
         username: 'admin',
         password: 'admin',
-        role: 'admin'
+        role: 'admin',
+        email: 'controleinterno@transpjardim.tech'
       },
       {
         id: 'user001',
@@ -147,7 +148,8 @@ app.post('/make-server-225e1157/init-data', async (c) => {
         username: 'educacao',
         password: '123',
         role: 'padrão',
-        secretaria: 'Secretaria de Educação'
+        secretaria: 'Secretaria de Educação',
+        email: 'educacao@transpjardim.tech'
       },
       {
         id: 'user002',
@@ -155,7 +157,8 @@ app.post('/make-server-225e1157/init-data', async (c) => {
         username: 'saude',
         password: '123',
         role: 'padrão',
-        secretaria: 'Secretaria de Saúde'
+        secretaria: 'Secretaria de Saúde',
+        email: 'saude@transpjardim.tech'
       },
       {
         id: 'user003',
@@ -163,7 +166,8 @@ app.post('/make-server-225e1157/init-data', async (c) => {
         username: 'obras',
         password: '123',
         role: 'padrão',
-        secretaria: 'Secretaria de Obras e Infraestrutura'
+        secretaria: 'Secretaria de Obras e Infraestrutura',
+        email: 'obras@transpjardim.tech'
       },
       {
         id: 'user004',
@@ -171,7 +175,8 @@ app.post('/make-server-225e1157/init-data', async (c) => {
         username: 'ambiente',
         password: '123',
         role: 'padrão',
-        secretaria: 'Secretaria de Meio Ambiente'
+        secretaria: 'Secretaria de Meio Ambiente',
+        email: 'ambiente@transpjardim.tech'
       }
     ];
     
@@ -264,6 +269,7 @@ app.post('/make-server-225e1157/auth/login', async (c) => {
           id: usuario.id,
           name: usuario.name,
           username,
+          email: usuario.email,
           role: usuario.role,
           secretaria: usuario.secretaria
         },
@@ -290,13 +296,23 @@ function adjustEmailForTestMode(originalEmail: string, resendApiKey: string): st
   const isLikelyTestMode = resendApiKey.startsWith('re_') && resendApiKey.length < 50;
   
   if (isLikelyTestMode) {
-    // E-mail conhecido que funciona em modo de teste baseado no erro anterior
+    // E-mail autorizado para modo de teste do Resend (baseado no erro observado)
     const testModeEmail = '2421541@faculdadececape.edu.br';
     console.log(`🔄 [SERVER] Modo teste detectado: redirecionando ${originalEmail} para ${testModeEmail}`);
     return testModeEmail;
   }
   
   return originalEmail;
+}
+
+// Função para selecionar domínio de e-mail com fallback
+function getEmailSender(): string {
+  // Tentar domínio personalizado primeiro, depois fallback para resend.dev
+  const customDomain = 'controleinterno@transpjardim.tech';
+  const fallbackDomain = 'Controladoria Jardim <onboarding@resend.dev>';
+  
+  // Por enquanto, usar o fallback que sabemos que funciona
+  return fallbackDomain;
 }
 
 // Enviar e-mail de alerta
@@ -399,7 +415,7 @@ app.post('/make-server-225e1157/email/send-alert', async (c) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'TranspJardim <onboarding@resend.dev>',
+        from: getEmailSender(),
         to: [adjustedEmail],
         subject: `TranspJardim: ${subject}${isTestModeRedirect ? ' [MODO TESTE]' : ''}`,
         html: htmlTemplate,
@@ -426,9 +442,65 @@ app.post('/make-server-225e1157/email/send-alert', async (c) => {
           
           // Extrair o e-mail autorizado da mensagem
           const emailMatch = result.message.match(/\(([^)]+)\)/);
-          const authorizedEmail = emailMatch ? emailMatch[1] : 'seu e-mail de cadastro';
+          const authorizedEmail = emailMatch ? emailMatch[1] : '2421541@faculdadececape.edu.br';
           
-          // Retornar como sucesso com informações do modo de teste
+          console.log(`📧 [SERVER] Email autorizado detectado: ${authorizedEmail}`);
+          
+          // Tentar enviar novamente para o email autorizado
+          try {
+            const retryResponse = await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${resendApiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                from: getEmailSender(),
+                to: [authorizedEmail],
+                subject: `TranspJardim: ${subject} [MODO TESTE - Redirecionado]`,
+                html: htmlTemplate,
+                text: `TranspJardim - ${subject}\\n\\nCritério: ${criterio?.nome}\\nSecretaria: ${criterio?.secretaria}\\nResponsável: ${usuario?.name}\\nPrazo: ${dueDate ? new Date(dueDate).toLocaleDateString('pt-BR') : 'N/A'}\\n\\nAcesse: https://transparenciajardim.app\\n\\n[EMAIL REDIRECIONADO PARA MODO DE TESTE]`
+              }),
+            });
+            
+            const retryResult = await retryResponse.json();
+            
+            if (retryResponse.ok) {
+              console.log(`✅ [SERVER] Email enviado com sucesso para ${authorizedEmail} (modo teste)`);
+              
+              // Salvar log do e-mail enviado
+              const emailLog = {
+                id: retryResult.id,
+                to: authorizedEmail,
+                originalTo: to,
+                subject: `${subject} [MODO TESTE]`,
+                alertType,
+                criterioId: criterio?.id,
+                usuarioId: usuario?.id,
+                sentAt: new Date().toISOString(),
+                status: 'sent',
+                testModeRedirect: true
+              };
+              
+              await kv.set(`email_log:${retryResult.id}`, emailLog);
+              
+              return c.json({ 
+                success: true,
+                emailId: retryResult.id,
+                message: `Email enviado com sucesso em modo de teste para ${authorizedEmail}`,
+                testMode: true,
+                authorizedEmail,
+                originalEmail: to,
+                note: `Sistema em modo de teste: email redirecionado de ${to} para ${authorizedEmail}`
+              });
+            } else {
+              console.error(`❌ [SERVER] Falha no retry para email autorizado:`, retryResult);
+            }
+          } catch (retryError) {
+            console.error(`❌ [SERVER] Erro no retry:`, retryError);
+          }
+          
+          // Se o retry falhou, retornar informação do modo de teste
           return c.json({ 
             success: true,
             emailId: 'test-mode-restriction',
@@ -438,7 +510,7 @@ app.post('/make-server-225e1157/email/send-alert', async (c) => {
             note: `Em modo de teste, e-mails só podem ser enviados para: ${authorizedEmail}`
           });
         } else if (result.message && result.message.includes('domain is not verified')) {
-          errorMessage = 'Domínio não verificado no Resend';
+          errorMessage = '📧 Sistema usando domínio padrão. Para domínio personalizado, configure transpjardim.tech no Resend.';
           errorType = 'domain_not_verified';
         } else {
           errorMessage = 'Acesso negado ao serviço Resend';
@@ -526,6 +598,44 @@ app.post('/make-server-225e1157/email/send-alert', async (c) => {
   }
 });
 
+// Verificar apenas configuração de e-mail (sem envio de teste)
+app.get('/make-server-225e1157/email/check-config', async (c) => {
+  try {
+    console.log('Verificando configuração de e-mail...');
+    
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    
+    if (!resendApiKey) {
+      return c.json({ 
+        configured: false,
+        error: 'RESEND_API_KEY não configurada'
+      });
+    }
+
+    // Validar formato da API key
+    const apiKeyTrimmed = resendApiKey.trim();
+    if (!apiKeyTrimmed.startsWith('re_') || apiKeyTrimmed.length < 32) {
+      return c.json({ 
+        configured: false,
+        error: 'RESEND_API_KEY com formato inválido'
+      });
+    }
+    
+    console.log('✅ API Key configurada e válida');
+    return c.json({ 
+      configured: true,
+      message: 'Sistema de e-mail configurado'
+    });
+    
+  } catch (error) {
+    console.error('Erro ao verificar configuração de e-mail:', error);
+    return c.json({ 
+      configured: false,
+      error: 'Erro ao verificar configuração'
+    }, 500);
+  }
+});
+
 // Buscar logs de e-mails
 app.get('/make-server-225e1157/email/logs', async (c) => {
   try {
@@ -555,6 +665,62 @@ app.get('/make-server-225e1157/email/logs', async (c) => {
     return c.json({ 
       success: false, 
       error: 'Erro interno do servidor' 
+    }, 500);
+  }
+});
+
+// Verificar status do domínio
+app.get('/make-server-225e1157/email/domain-status', async (c) => {
+  try {
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    if (!resendApiKey) {
+      return c.json({
+        success: false,
+        error: 'RESEND_API_KEY não configurada'
+      }, 500);
+    }
+
+    // Verificar domínio transpjardim.tech
+    const response = await fetch('https://api.resend.com/domains', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      return c.json({
+        success: false,
+        error: 'Erro ao verificar domínios',
+        details: data
+      }, response.status);
+    }
+
+    const transparenciaDomain = data.data?.find((domain: any) => 
+      domain.name === 'transpjardim.tech'
+    );
+
+    return c.json({
+      success: true,
+      domain: transparenciaDomain ? {
+        name: transparenciaDomain.name,
+        status: transparenciaDomain.status,
+        verified: transparenciaDomain.status === 'verified'
+      } : null,
+      message: transparenciaDomain 
+        ? `Domínio transpjardim.tech está ${transparenciaDomain.status}`
+        : 'Domínio transpjardim.tech não configurado no Resend',
+      allDomains: data.data?.map((d: any) => ({ name: d.name, status: d.status })) || []
+    });
+  } catch (error) {
+    console.error('Erro ao verificar status do domínio:', error);
+    return c.json({
+      success: false,
+      error: 'Erro interno do servidor',
+      details: error instanceof Error ? error.message : 'Erro desconhecido'
     }, 500);
   }
 });
@@ -617,7 +783,7 @@ app.post('/make-server-225e1157/email/test', async (c) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'TranspJardim <onboarding@resend.dev>',
+        from: getEmailSender(),
         to: [adjustedTestEmail],
         subject: `TranspJardim - Teste de Configuração de E-mail${isTestModeRedirect ? ' [MODO TESTE]' : ''}`,
         html: `
@@ -652,7 +818,7 @@ app.post('/make-server-225e1157/email/test', async (c) => {
         errorType = 'invalid_api_key';
       } else if (response.status === 403) {
         if (result.message && result.message.includes('domain is not verified')) {
-          errorMessage = 'E-mail enviado com sucesso! Sistema configurado corretamente.';
+          errorMessage = 'API Key válida! Configure domínio transpjardim.tech no Resend.';
           errorType = 'success_with_domain_note';
           
           // Mesmo com erro 403 de domínio, se chegou até aqui a API key está válida
@@ -660,20 +826,78 @@ app.post('/make-server-225e1157/email/test', async (c) => {
             success: true, 
             emailId: 'domain-not-verified-but-api-valid',
             message: errorMessage,
-            note: 'API Key válida. Para envios em produção, configure um domínio verificado no Resend.'
+            note: 'Para envios em produção, configure o domínio transpjardim.tech no painel do Resend.'
           });
         } else if (result.message && result.message.includes('You can only send testing emails to your own email address')) {
-          errorMessage = '✅ API Key configurada corretamente!';
-          errorType = 'success_with_test_restriction';
+          console.log('🔵 [SERVER] Modo de teste detectado no endpoint de teste');
           
           // Extrair o e-mail autorizado da mensagem
           const emailMatch = result.message.match(/\(([^)]+)\)/);
-          const authorizedEmail = emailMatch ? emailMatch[1] : 'seu e-mail de cadastro';
+          const authorizedEmail = emailMatch ? emailMatch[1] : '2421541@faculdadececape.edu.br';
           
+          console.log(`📧 [SERVER] Email autorizado para teste: ${authorizedEmail}`);
+          
+          // Tentar enviar para o email autorizado
+          try {
+            const retryResponse = await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${resendApiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                from: getEmailSender(),
+                to: [authorizedEmail],
+                subject: `TranspJardim - Teste de Configuração [REDIRECIONADO]`,
+                html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <div style="background: linear-gradient(135deg, #4a7c59, #6c9a6f); color: white; padding: 20px; text-align: center; border-radius: 8px;">
+                    <h1>🏛️ TranspJardim</h1>
+                    <p>Controladoria Municipal de Jardim/CE</p>
+                  </div>
+                  <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-radius: 0 0 8px 8px;">
+                    <h2>✅ Teste de E-mail Realizado com Sucesso!</h2>
+                    <p>Se você recebeu este e-mail, significa que o sistema de alertas por e-mail do TranspJardim está funcionando corretamente.</p>
+                    <p><strong>Data/Hora do Teste:</strong> ${new Date().toLocaleString('pt-BR')}</p>
+                    <div style="background: #e3f2fd; border: 1px solid #2196f3; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                      <p><strong>🔄 Email Redirecionado (Modo Teste):</strong></p>
+                      <p>📧 <strong>Destinatário solicitado:</strong> ${testEmail}</p>
+                      <p>📮 <strong>Enviado para:</strong> ${authorizedEmail}</p>
+                      <p><em>Contas novas do Resend só podem enviar para o email de cadastro.</em></p>
+                    </div>
+                    <p>O sistema agora pode enviar alertas automáticos para os critérios de transparência.</p>
+                  </div>
+                </div>`,
+                text: `TranspJardim - Teste de E-mail\\n\\nSe você recebeu este e-mail, o sistema está funcionando corretamente.\\nData/Hora: ${new Date().toLocaleString('pt-BR')}\\n\\nEmail redirecionado de ${testEmail} para ${authorizedEmail} devido ao modo de teste do Resend.`
+              }),
+            });
+            
+            const retryResult = await retryResponse.json();
+            
+            if (retryResponse.ok) {
+              console.log(`✅ [SERVER] Email de teste enviado com sucesso para ${authorizedEmail}`);
+              
+              return c.json({ 
+                success: true, 
+                emailId: retryResult.id,
+                message: `Email de teste enviado com sucesso!`,
+                note: `Sistema em modo de teste: email redirecionado de ${testEmail} para ${authorizedEmail}`,
+                testMode: true,
+                authorizedEmail,
+                originalEmail: testEmail
+              });
+            } else {
+              console.error(`❌ [SERVER] Falha no retry do teste:`, retryResult);
+            }
+          } catch (retryError) {
+            console.error(`❌ [SERVER] Erro no retry do teste:`, retryError);
+          }
+          
+          // Se o retry falhou, retornar informação básica
           return c.json({ 
             success: true, 
             emailId: 'test-restriction-but-api-valid',
-            message: errorMessage,
+            message: '✅ API Key configurada corretamente!',
             note: `Sistema funcionando! Em modo de teste, só pode enviar para: ${authorizedEmail}`,
             testMode: true,
             authorizedEmail
@@ -938,6 +1162,252 @@ app.all('*', (c) => {
     path: c.req.path,
     method: c.req.method 
   }, 404);
+});
+
+// ============================================
+// ROTA PARA BUSCAR E-MAILS DE USUÁRIOS
+// ============================================
+
+// Buscar e-mails de usuários para notificações
+app.get('/make-server-225e1157/users/emails', async (c) => {
+  try {
+    console.log('=== BUSCANDO E-MAILS DE USUÁRIOS ===');
+    
+    // Verificar parâmetros de consulta
+    const secretaria = c.req.query('secretaria');
+    const role = c.req.query('role');
+    
+    if (typeof kv.getByPrefix !== 'function') {
+      console.error('ERRO: kv.getByPrefix não disponível');
+      return c.json({ 
+        success: false, 
+        error: 'Sistema de armazenamento não configurado' 
+      }, 500);
+    }
+    
+    // Buscar todos os usuários
+    const usuarios = await kv.getByPrefix('usuario:');
+    
+    if (!Array.isArray(usuarios)) {
+      return c.json({ 
+        success: false, 
+        error: 'Erro ao buscar usuários' 
+      }, 500);
+    }
+    
+    // Filtrar usuários e extrair e-mails
+    let usuariosFiltrados = usuarios.map(item => item.value).filter(Boolean);
+    
+    // Aplicar filtros se especificados
+    if (secretaria) {
+      usuariosFiltrados = usuariosFiltrados.filter(user => user.secretaria === secretaria);
+    }
+    
+    if (role) {
+      usuariosFiltrados = usuariosFiltrados.filter(user => user.role === role);
+    }
+    
+    // Extrair e-mails válidos
+    const emails = usuariosFiltrados
+      .filter(user => user.email && user.email.includes('@'))
+      .map(user => ({
+        id: user.id,
+        name: user.name,
+        username: user.username,
+        email: user.email,
+        secretaria: user.secretaria,
+        role: user.role
+      }));
+    
+    console.log(`✅ ${emails.length} e-mails encontrados`);
+    
+    return c.json({ 
+      success: true, 
+      data: emails,
+      count: emails.length,
+      filters: { secretaria, role }
+    });
+    
+  } catch (error) {
+    console.error('Erro ao buscar e-mails de usuários:', error);
+    return c.json({ 
+      success: false, 
+      error: 'Erro interno do servidor' 
+    }, 500);
+  }
+});
+
+// Enviar notificação para múltiplos usuários baseado em critério
+app.post('/make-server-225e1157/email/notify-users', async (c) => {
+  try {
+    const { criterio, alertType, secretaria, includeAdmin } = await c.req.json();
+    console.log(`Enviando notificações para critério: ${criterio?.nome}`);
+    
+    // Buscar e-mails dos usuários que devem receber a notificação
+    const usuarios = await kv.getByPrefix('usuario:');
+    
+    if (!Array.isArray(usuarios)) {
+      return c.json({ 
+        success: false, 
+        error: 'Erro ao buscar usuários' 
+      }, 500);
+    }
+    
+    // Filtrar usuários que devem receber a notificação
+    let usuariosParaNotificar = usuarios.map(item => item.value).filter(Boolean);
+    
+    // Se especificada secretaria, filtrar por ela
+    if (secretaria) {
+      usuariosParaNotificar = usuariosParaNotificar.filter(user => 
+        user.secretaria === secretaria || (includeAdmin && user.role === 'admin')
+      );
+    }
+    
+    // Se includeAdmin é false, excluir admins
+    if (!includeAdmin) {
+      usuariosParaNotificar = usuariosParaNotificar.filter(user => user.role !== 'admin');
+    }
+    
+    // Filtrar apenas usuários com e-mail válido
+    const emailsParaEnviar = usuariosParaNotificar
+      .filter(user => user.email && user.email.includes('@'))
+      .map(user => user.email);
+    
+    if (emailsParaEnviar.length === 0) {
+      return c.json({ 
+        success: false, 
+        error: 'Nenhum usuário com e-mail válido encontrado para notificação',
+        filters: { secretaria, includeAdmin }
+      }, 400);
+    }
+    
+    // Preparar dados do e-mail
+    const subject = alertType === 'urgent' 
+      ? `🔴 URGENTE: ${criterio?.nome}` 
+      : `🟡 AVISO: ${criterio?.nome}`;
+    
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    if (!resendApiKey) {
+      return c.json({ 
+        success: false, 
+        error: 'RESEND_API_KEY não configurada' 
+      }, 500);
+    }
+    
+    // Template HTML do e-mail
+    const htmlTemplate = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>TranspJardim - Notificação de Critério</title>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #4a7c59, #6c9a6f); color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-radius: 0 0 8px 8px; }
+            .alert-box { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 6px; margin: 20px 0; }
+            .alert-urgent { background: #f8d7da; border: 1px solid #f5c6cb; }
+            .button { display: inline-block; background: #4a7c59; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0; }
+            .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+            .logo { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <div class="logo">🏛️ TranspJardim</div>
+                <h1>Notificação de Transparência</h1>
+                <p>Controladoria Municipal de Jardim/CE</p>
+            </div>
+            
+            <div class="content">
+                <h2>📋 ${subject}</h2>
+                
+                <div class="alert-box ${alertType === 'urgent' ? 'alert-urgent' : ''}">
+                    <h3>Critério: ${criterio?.nome || 'N/A'}</h3>
+                    <p><strong>Secretaria:</strong> ${criterio?.secretaria || 'N/A'}</p>
+                    <p><strong>Tipo de Alerta:</strong> ${alertType === 'urgent' ? '🔴 URGENTE' : '🟡 AVISO'}</p>
+                    <p><strong>Data/Hora:</strong> ${new Date().toLocaleString('pt-BR')}</p>
+                </div>
+                
+                <p>Esta é uma notificação automática do sistema TranspJardim da Controladoria Municipal de Jardim/CE.</p>
+                
+                <p>Por favor, acesse o sistema para verificar e atualizar o status dos critérios quando apropriado.</p>
+                
+                <a href="https://transparenciajardim.app" class="button">Acessar TranspJardim</a>
+            </div>
+            
+            <div class="footer">
+                <p>© 2024 Prefeitura Municipal de Jardim/CE - Controladoria Geral</p>
+                <p>Este e-mail foi enviado automaticamente pelo sistema TranspJardim</p>
+                <p><strong>Remetente:</strong> controleinterno.jardimce@gmail.com</p>
+            </div>
+        </div>
+    </body>
+    </html>`;
+    
+    // Enviar e-mail para todos os destinatários
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Controladoria Jardim <controleinterno.jardimce@gmail.com>',
+        to: emailsParaEnviar,
+        subject: `TranspJardim: ${subject}`,
+        html: htmlTemplate,
+        text: `TranspJardim - ${subject}\n\nCritério: ${criterio?.nome}\nSecretaria: ${criterio?.secretaria}\nTipo: ${alertType === 'urgent' ? 'URGENTE' : 'AVISO'}\n\nAcesse: https://transparenciajardim.app`
+      }),
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      console.error('Erro do Resend na notificação em massa:', result);
+      return c.json({ 
+        success: false, 
+        error: 'Falha ao enviar notificações',
+        details: result 
+      }, 500);
+    }
+    
+    console.log(`Notificações enviadas com sucesso. ID: ${result.id}`);
+    
+    // Salvar log das notificações enviadas
+    const emailLog = {
+      id: result.id,
+      to: emailsParaEnviar,
+      recipientCount: emailsParaEnviar.length,
+      subject,
+      alertType,
+      criterioId: criterio?.id,
+      sentAt: new Date().toISOString(),
+      status: 'sent',
+      notificationType: 'mass_notification'
+    };
+    
+    await kv.set(`email_log:${result.id}`, emailLog);
+    
+    return c.json({ 
+      success: true, 
+      emailId: result.id,
+      message: `Notificações enviadas para ${emailsParaEnviar.length} usuários`,
+      recipients: emailsParaEnviar.length,
+      emails: emailsParaEnviar
+    });
+    
+  } catch (error) {
+    console.error('Erro ao enviar notificações em massa:', error);
+    return c.json({ 
+      success: false, 
+      error: 'Erro interno do servidor',
+      details: error instanceof Error ? error.message : 'Erro desconhecido'
+    }, 500);
+  }
 });
 
 console.log('Servidor TranspJardim inicializado e pronto para receber requisições');

@@ -24,7 +24,7 @@ export const useSupabase = () => {
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout mais rápido
 
       const response = await fetch(`${API_BASE}${endpoint}`, {
         ...options,
@@ -51,11 +51,11 @@ export const useSupabase = () => {
       
       if (err instanceof Error) {
         if (err.name === 'AbortError') {
-          errorMessage = 'Timeout na conexão - servidor indisponível';
+          errorMessage = 'Timeout na conexão (5s) - servidor muito lento ou indisponível';
         } else if (err.message.includes('Failed to fetch')) {
           errorMessage = 'Não foi possível conectar ao servidor';
         } else if (err.message.includes('NetworkError')) {
-          errorMessage = 'Erro de rede';
+          errorMessage = 'Erro de rede ou CORS';
         } else if (err.message && err.message.trim()) {
           errorMessage = err.message.trim();
         }
@@ -73,7 +73,8 @@ export const useSupabase = () => {
         endpoint,
         error: errorMessage,
         originalError: err,
-        url: `${API_BASE}${endpoint}`
+        url: `${API_BASE}${endpoint}`,
+        timeout: '5s'
       });
       
       return { success: false, error: errorMessage };
@@ -236,7 +237,7 @@ export const useSupabase = () => {
       }
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout para health check
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout mais rápido
 
       const response = await fetch(`${API_BASE}/health`, {
         method: 'GET',
@@ -270,13 +271,15 @@ export const useSupabase = () => {
       
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          errorMessage = 'Timeout na conexão';
+          errorMessage = 'Timeout na conexão (3s)';
         } else if (error.message.includes('Failed to fetch')) {
           errorMessage = 'Servidor não disponível';
+        } else if (error.message.includes('NetworkError')) {
+          errorMessage = 'Erro de rede';
         }
       }
       
-      console.log('❌ Falha na conexão:', { errorMsg: errorMessage });
+      console.log('❌ Falha na conexão health check:', { errorMsg: errorMessage });
       return { 
         success: false, 
         error: errorMessage

@@ -37,35 +37,40 @@ export const clearStoredAuth = () => {
 };
 
 export const validateLogin = (username: string, password: string): User | null => {
-  console.log(`Validando login mock: ${username}`);
-  console.log(`Usuários disponíveis:`, mockUsers.map(u => u.username));
+  console.log(`🔐 Validando login mock: ${username}`);
+  console.log(`👥 Usuários disponíveis:`, mockUsers.map(u => u.username));
   
-  // Simulação de validação - em produção viria da API
+  // Buscar usuário no mock
   const user = mockUsers.find(u => u.username === username);
   
   if (!user) {
-    console.log(`Usuário ${username} não encontrado no mock`);
+    console.log(`❌ Usuário ${username} não encontrado no mock`);
     return null;
   }
   
-  // Validar senha baseado no usuário
+  // Validar senhas aceitas para cada usuário
   const validPasswords = {
-    'admin': ['admin', 'admin123'],
+    'admin': ['admin', 'admin123', '123'],
     'educacao': ['123', 'user123', 'educacao'],
     'saude': ['123', 'user123', 'saude'], 
     'obras': ['123', 'user123', 'obras'],
     'ambiente': ['123', 'user123', 'ambiente'],
-    'usuario': ['usuario', 'user123']
+    'habitacao': ['123', 'user123', 'habitacao'],
+    'agricultura': ['123', 'user123', 'agricultura'],
+    'cultura': ['123', 'user123', 'cultura'],
+    'assistencia': ['123', 'user123', 'assistencia'],
+    'turismo': ['123', 'user123', 'turismo'],
+    'usuario': ['usuario', 'user123', '123']
   };
   
-  const userValidPasswords = validPasswords[username] || [password];
+  const userValidPasswords = validPasswords[username as keyof typeof validPasswords] || ['123'];
   
   if (userValidPasswords.includes(password)) {
-    console.log(`Login mock bem-sucedido para: ${username}`);
+    console.log(`✅ Login mock bem-sucedido para: ${username}`);
     return user;
   }
   
-  console.log(`Senha inválida para usuário: ${username}`);
+  console.log(`❌ Senha inválida para usuário: ${username}. Senhas aceitas:`, userValidPasswords);
   return null;
 };
 

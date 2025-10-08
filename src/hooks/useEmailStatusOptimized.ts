@@ -53,23 +53,35 @@ export function useEmailStatus(): EmailStatusHook {
     setError(null);
     
     try {
-      console.log('🔍 [useEmailStatus] Verificando status da API Key usando EmailService...');
+      console.log('🔍 [useEmailStatus] Verificando configuração da API Key...');
       
-      // Usar o EmailService em vez de fetch direto
-      const result = await emailService.sendTestEmail('status-check@test.local');
+      // Verificar apenas se a API key está configurada, sem enviar email de teste
+      const { projectId, publicAnonKey } = await import('../utils/supabase/info');
+      
+      const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-225e1157/email/check-config`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${publicAnonKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const result = await response.json();
 
       if (!mountedRef.current) return;
 
-      // Se chegou aqui, significa que a API Key está válida
-      globalEmailStatus = 'configured';
-      setStatus('configured');
-      globalError = null;
-      setError(null);
-      
-      if (result.testMode) {
-        console.log('✅ [useEmailStatus] API Key válida - Sistema em modo de teste');
+      if (response.ok && result.configured) {
+        globalEmailStatus = 'configured';
+        setStatus('configured');
+        globalError = null;
+        setError(null);
+        console.log('✅ [useEmailStatus] API Key configurada');
       } else {
-        console.log('✅ [useEmailStatus] API Key configurada e válida');
+        globalEmailStatus = 'not_configured';
+        setStatus('not_configured');
+        globalError = result.error || 'API Key não configurada';
+        setError(globalError);
+        console.log('⚠️ [useEmailStatus] API Key não configurada');
       }
       
       globalLastCheck = new Date();
@@ -78,77 +90,12 @@ export function useEmailStatus(): EmailStatusHook {
     } catch (error) {
       if (!mountedRef.current) return;
       
-      console.log('🔍 [useEmailStatus] Analisando erro da verificação...');
+      console.log('🔍 [useEmailStatus] Erro ao verificar configuração:', error);
       
-      if (error instanceof Error) {
-        const errorMessage = error.message;
-        
-        // Verificar se é erro de modo de teste (que na verdade é sucesso)
-        if (errorMessage.includes('You can only send testing emails to your own email address')) {
-          globalEmailStatus = 'configured';
-          setStatus('configured');
-          globalError = null;
-          setError(null);
-          console.log('✅ [useEmailStatus] API Key válida - Sistema em modo de teste (detectado via erro)');
-        }
-        // Verificar se é erro de API Key não configurada
-        else if (errorMessage.includes('não configurada no servidor') || 
-                 errorMessage.includes('missing_api_key')) {
-          globalEmailStatus = 'not_configured';
-          setStatus('not_configured');
-          globalError = 'API Key não configurada no servidor';
-          setError(globalError);
-          console.log('⚠️ [useEmailStatus] API Key não configurada');
-        }
-        // Verificar se é erro de formato inválido
-        else if (errorMessage.includes('formato inválido') || 
-                 errorMessage.includes('invalid_api_key_format')) {
-          globalEmailStatus = 'invalid';
-          setStatus('invalid');
-          globalError = 'API Key com formato inválido';
-          setError(globalError);
-          console.log('❌ [useEmailStatus] API Key com formato inválido');
-        }
-        // Verificar se é erro de API Key inválida
-        else if (errorMessage.includes('inválida') || errorMessage.includes('expirada')) {
-          globalEmailStatus = 'invalid';
-          setStatus('invalid');
-          globalError = 'API Key inválida ou expirada';
-          setError(globalError);
-          console.log('❌ [useEmailStatus] API Key inválida');
-        }
-        // Verificar se é erro de conectividade
-        else if (errorMessage.includes('conectividade') || errorMessage.includes('fetch')) {
-          globalEmailStatus = 'unknown';
-          setStatus('unknown');
-          globalError = 'Erro de conectividade';
-          setError(globalError);
-          console.log('❌ [useEmailStatus] Erro de conectividade');
-        }
-        // Rate limit (que é um sinal de que a API Key está válida)
-        else if (errorMessage.includes('rate_limit_exceeded') || 
-                 errorMessage.includes('Too many requests')) {
-          globalEmailStatus = 'configured';
-          setStatus('configured');
-          globalError = null;
-          setError(null);
-          console.log('✅ [useEmailStatus] API Key válida - Rate limit atingido (normal)');
-        }
-        // Outros erros
-        else {
-          globalEmailStatus = 'unknown';
-          setStatus('unknown');
-          globalError = errorMessage || 'Erro desconhecido';
-          setError(globalError);
-          console.log('❌ [useEmailStatus] Erro desconhecido:', errorMessage);
-        }
-      } else {
-        globalEmailStatus = 'unknown';
-        setStatus('unknown');
-        globalError = 'Erro desconhecido';
-        setError(globalError);
-        console.log('❌ [useEmailStatus] Erro não identificado');
-      }
+      globalEmailStatus = 'not_configured';
+      setStatus('not_configured');
+      globalError = 'Não foi possível verificar a configuração de e-mail';
+      setError(globalError);
       
       globalLastCheck = new Date();
       setLastCheck(globalLastCheck);
@@ -160,23 +107,18 @@ export function useEmailStatus(): EmailStatusHook {
     }
   }, [isChecking]);
 
-  // Verificação inicial apenas se nunca verificou ou há mais de 15 minutos (otimizado)
+  // Não fazer verificação automática - apenas quando explicitamente solicitada
   useEffect(() => {
-    const needsCheck = !globalLastCheck || (new Date().getTime() - globalLastCheck.getTime()) > 15 * 60 * 1000;
-    
-    if (needsCheck && !isGlobalChecking) {
-      const timer = setTimeout(() => {
-        if (mountedRef.current && !isGlobalChecking) {
-          checkStatus();
-        }
-      }, 2000); // Aguardar 2 segundos antes da primeira verificação
-      
-      return () => clearTimeout(timer);
-    } else {
-      // Usar status em cache
+    // Usar status em cache se disponível
+    if (globalLastCheck) {
       setStatus(globalEmailStatus);
       setError(globalError);
       setLastCheck(globalLastCheck);
+    } else {
+      // Status inicial desconhecido, sem verificação automática
+      setStatus('unknown');
+      setError(null);
+      setLastCheck(null);
     }
   }, []); // Remove dependências para evitar loops
 

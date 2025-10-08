@@ -3,6 +3,7 @@ export interface User {
   username: string;
   role: 'admin' | 'padrão';
   name: string;
+  email: string; // E-mail do usuário para recebimento de notificações
   secretaria?: string; // Secretaria do usuário (opcional para admin)
   dataCriacao?: string;
   dataAtualizacao?: string;

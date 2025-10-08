@@ -16,6 +16,8 @@ import { CriterioCompletionStatus } from './CriterioCompletionStatus';
 import { UserCompletionHistory } from './UserCompletionHistory';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { JardimLogo } from './JardimLogo';
+import { ImageWithFallback } from './figma/ImageWithFallback';
+import logoRedonda from 'figma:asset/f6a9869d371560fae8a34486a3ae60bdf404d376.png';
 
 interface CriteriosListProps {
   criterios: Criterio[];
@@ -142,7 +144,17 @@ export const CriteriosList = ({ criterios, user, onAddCriterio, onEditCriterio, 
         <CardHeader className="bg-[var(--jardim-green-lighter)] border-b border-[var(--border)] pb-4">
           {/* Cabeçalho Principal */}
           <div className="flex items-center space-x-3 mb-4">
-            <JardimLogo />
+            <div className="flex-shrink-0">
+              <ImageWithFallback 
+                src={logoRedonda}
+                alt="Prefeitura de Jardim - CE"
+                className="w-11 h-11 object-contain rounded-full"
+                style={{ 
+                  filter: 'drop-shadow(0 2px 4px rgba(74, 124, 89, 0.1)) brightness(1.05) contrast(1.05)',
+                  background: 'transparent'
+                }}
+              />
+            </div>
             <div className="flex-1">
               <h2 className="text-2xl font-bold text-[var(--jardim-green)]">Critérios e Indicadores</h2>
               <p className="text-[var(--jardim-gray)]">
@@ -271,15 +283,14 @@ export const CriteriosList = ({ criterios, user, onAddCriterio, onEditCriterio, 
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Progresso</TableHead>
-                  <TableHead>Vencimento</TableHead>
-                  <TableHead>Periodicidade</TableHead>
-                  <TableHead>Secretaria</TableHead>
-                  <TableHead>Responsável</TableHead>
-                  <TableHead>Conclusão</TableHead>
-                  {isAdmin && <TableHead className="w-24">Ações</TableHead>}
+                  <TableHead className="w-72 max-w-72">Nome</TableHead>
+                  <TableHead className="w-20">Status</TableHead>
+                  <TableHead className="w-24">Progresso</TableHead>
+                  <TableHead className="w-24">Vencimento</TableHead>
+                  <TableHead className="w-24">Secretaria</TableHead>
+                  <TableHead className="w-32">Responsável</TableHead>
+                  <TableHead className="w-20">Conclusão</TableHead>
+                  {isAdmin && <TableHead className="w-20">Ações</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -292,15 +303,17 @@ export const CriteriosList = ({ criterios, user, onAddCriterio, onEditCriterio, 
                       key={criterio.id}
                       className={isUserCompleted ? 'bg-green-50 border-l-4 border-l-green-500' : ''}
                     >
-                      <TableCell className="font-medium">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            {criterio.nome}
+                      <TableCell className="font-medium w-72 max-w-72 p-3">
+                        <div className="space-y-2">
+                          <div className="flex items-start gap-2">
+                            <span className="text-sm leading-relaxed break-words hyphens-auto whitespace-pre-wrap">
+                              {criterio.nome}
+                            </span>
                             {isUserCompleted && (
-                              <CheckCircle className="w-4 h-4 text-green-600" />
+                              <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
                             )}
                           </div>
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-xs text-muted-foreground break-words hyphens-auto leading-relaxed whitespace-pre-wrap">
                             {criterio.descricao}
                           </div>
                         </div>
@@ -318,16 +331,16 @@ export const CriteriosList = ({ criterios, user, onAddCriterio, onEditCriterio, 
                       <TableCell>
                         {new Date(criterio.dataVencimento).toLocaleDateString('pt-BR')}
                       </TableCell>
-                      <TableCell className="text-sm">
-                        {getPeriodicidadeLabel(criterio.periodicidade)}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        <div className="max-w-32 truncate" title={criterio.secretaria}>
+
+                      <TableCell className="text-sm w-24">
+                        <div className="truncate" title={criterio.secretaria}>
                           {criterio.secretaria}
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm">
-                        {criterio.responsavel}
+                      <TableCell className="text-sm w-32">
+                        <div className="truncate" title={criterio.responsavel}>
+                          {criterio.responsavel}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {user && onToggleCompletion && (

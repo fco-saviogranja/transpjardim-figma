@@ -20,6 +20,7 @@ export const mockUsers: User[] = [
     username: 'admin',
     role: 'admin',
     name: 'Administrador Sistema',
+    email: 'admin@jardim.ce.gov.br',
     dataCriacao: '2024-10-01T10:00:00Z'
     // Admin não tem secretaria específica - vê todos os critérios
   },
@@ -28,6 +29,7 @@ export const mockUsers: User[] = [
     username: 'educacao',
     role: 'padrão',
     name: 'João Silva',
+    email: 'educacao@jardim.ce.gov.br',
     secretaria: 'Secretaria de Educação',
     dataCriacao: '2024-10-01T10:00:00Z'
   },
@@ -36,6 +38,7 @@ export const mockUsers: User[] = [
     username: 'saude',
     role: 'padrão',
     name: 'Maria Santos',
+    email: 'saude@jardim.ce.gov.br',
     secretaria: 'Secretaria de Saúde',
     dataCriacao: '2024-10-01T10:00:00Z'
   },
@@ -44,6 +47,7 @@ export const mockUsers: User[] = [
     username: 'obras',
     role: 'padrão',
     name: 'Carlos Oliveira',
+    email: 'obras@jardim.ce.gov.br',
     secretaria: 'Secretaria de Obras e Infraestrutura',
     dataCriacao: '2024-10-01T10:00:00Z'
   },
@@ -52,6 +56,7 @@ export const mockUsers: User[] = [
     username: 'ambiente',
     role: 'padrão',
     name: 'Ana Costa',
+    email: 'ambiente@jardim.ce.gov.br',
     secretaria: 'Secretaria de Meio Ambiente',
     dataCriacao: '2024-10-01T10:00:00Z'
   },
@@ -60,6 +65,7 @@ export const mockUsers: User[] = [
     username: 'habitacao',
     role: 'padrão',
     name: 'Pedro Rocha',
+    email: 'habitacao@jardim.ce.gov.br',
     secretaria: 'Secretaria de Habitação e Desenvolvimento Social',
     dataCriacao: '2024-10-01T10:00:00Z'
   },
@@ -68,7 +74,17 @@ export const mockUsers: User[] = [
     username: 'agricultura',
     role: 'padrão',
     name: 'Lucia Fernandes',
+    email: 'agricultura@jardim.ce.gov.br',
     secretaria: 'Secretaria de Agricultura e Desenvolvimento Rural',
+    dataCriacao: '2024-10-01T10:00:00Z'
+  },
+  {
+    id: '8',
+    username: 'financas',
+    role: 'padrão',
+    name: 'Carlos Mendes',
+    email: 'financas@jardim.ce.gov.br',
+    secretaria: 'Secretaria de Administração e Finanças',
     dataCriacao: '2024-10-01T10:00:00Z'
   }
 ];
@@ -170,6 +186,72 @@ export const mockCriterios: Criterio[] = [
     conclusoesPorUsuario: {
       '3': { concluido: true, dataConclusao: '2024-10-05T09:15:00Z' }
     }
+  },
+  // Novos critérios de transparência
+  {
+    id: '8',
+    nome: 'Divulgação da classificação orçamentária por natureza da receita',
+    status: 'ativo',
+    valor: 90,
+    meta: 100,
+    dataVencimento: '2024-12-31',
+    responsavel: 'Carlos Mendes',
+    secretaria: 'Secretaria de Administração e Finanças',
+    descricao: 'O Item 3.2 verifica se divulga a classificação orçamentária por natureza da receita (categoria econômica, origem, espécie)?',
+    periodicidade: 'mensal',
+    conclusoesPorUsuario: {}
+  },
+  {
+    id: '9',
+    nome: 'Divulgação da lista dos inscritos em dívida ativa',
+    status: 'ativo',
+    valor: 85,
+    meta: 100,
+    dataVencimento: '2024-12-31',
+    responsavel: 'Carlos Mendes',
+    secretaria: 'Secretaria de Administração e Finanças',
+    descricao: 'O Item 3.3 verifica se divulga a lista dos inscritos em dívida ativa, contendo, no mínimo, dados referentes ao nome do inscrito e o valor total da dívida?',
+    periodicidade: 'mensal',
+    conclusoesPorUsuario: {}
+  },
+  {
+    id: '10',
+    nome: 'Divulgação do total das despesas empenhadas, liquidadas e pagas',
+    status: 'ativo',
+    valor: 95,
+    meta: 100,
+    dataVencimento: '2024-12-31',
+    responsavel: 'Carlos Mendes',
+    secretaria: 'Secretaria de Administração e Finanças',
+    descricao: 'O Item 4.1 verifica se divulga o total das despesas empenhadas, liquidadas e pagas?',
+    periodicidade: 'mensal',
+    conclusoesPorUsuario: {}
+  },
+  {
+    id: '11',
+    nome: 'Divulgação das despesas por classificação orçamentária',
+    status: 'ativo',
+    valor: 88,
+    meta: 100,
+    dataVencimento: '2024-12-31',
+    responsavel: 'Carlos Mendes',
+    secretaria: 'Secretaria de Administração e Finanças',
+    descricao: 'O Item 4.2 verifica se divulga as despesas por classificação orçamentária?',
+    periodicidade: 'mensal',
+    conclusoesPorUsuario: {}
+  },
+  {
+    id: '12',
+    nome: 'Consulta de empenhos com detalhes do beneficiário',
+    status: 'ativo',
+    valor: 80,
+    meta: 100,
+    dataVencimento: '2024-12-31',
+    responsavel: 'Carlos Mendes',
+    secretaria: 'Secretaria de Administração e Finanças',
+    descricao: 'O Item 4.3 verifica se possibilita a consulta de empenhos com os detalhes do beneficiário do pagamento ou credor, o bem fornecido ou serviço prestado e a identificação do procedimento licitatório originário da despesa?',
+    periodicidade: 'mensal',
+    conclusoesPorUsuario: {}
   }
 ];
 
@@ -200,14 +282,32 @@ export const mockAlertas: Alerta[] = [
     prioridade: 'baixa',
     dataEnvio: '2024-10-03T14:00:00Z',
     lido: true
+  },
+  {
+    id: '4',
+    criterioId: '9',
+    tipo: 'status',
+    mensagem: 'Divulgação da lista de dívida ativa precisa ser atualizada',
+    prioridade: 'média',
+    dataEnvio: '2024-10-05T16:30:00Z',
+    lido: false
+  },
+  {
+    id: '5',
+    criterioId: '12',
+    tipo: 'meta',
+    mensagem: 'Consulta de empenhos está 20% abaixo da meta estabelecida',
+    prioridade: 'alta',
+    dataEnvio: '2024-10-06T09:15:00Z',
+    lido: false
   }
 ];
 
 export const mockMetricas: Metricas = {
-  totalCriterios: 5,
-  ativas: 3,
+  totalCriterios: 12,
+  ativas: 10,
   pendentes: 1,
   vencidas: 1,
-  percentualCumprimento: 68,
-  alertasAtivos: 2
+  percentualCumprimento: 75,
+  alertasAtivos: 4
 };

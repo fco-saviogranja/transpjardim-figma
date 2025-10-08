@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Settings, Users, Database, Mail, Shield, Activity, ArrowLeft, Server, Bell, AlertTriangle } from 'lucide-react';
+import { Settings, Users, Database, Mail, Shield, Activity, Server, Bell, AlertTriangle } from 'lucide-react';
 import { JardimBreadcrumb } from './JardimBreadcrumb';
 import { UserManagement } from './UserManagement';
 import { SystemInitializer } from './SystemInitializer';
@@ -15,11 +15,18 @@ import { EmailSystemStatus } from './EmailSystemStatus';
 import { AlertsDebugPanel } from './AlertsDebugPanel';
 import { EmailTestButton } from './EmailTestButton';
 import { EmailStatusIndicator } from './EmailStatusIndicator';
+import { SimpleEmailTest } from './SimpleEmailTest';
 import { useSupabase } from '../hooks/useSupabase';
 import { JardimLogo } from './JardimLogo';
 import { mockCriterios, mockAlertas } from '../lib/mockData';
+import { ImageWithFallback } from './figma/ImageWithFallback';
+import logoRedonda from 'figma:asset/f6a9869d371560fae8a34486a3ae60bdf404d376.png';
 
-export const AdminPanel = () => {
+interface AdminPanelProps {
+  onNavigate?: (view: string) => void;
+}
+
+export const AdminPanel = ({ onNavigate }: AdminPanelProps) => {
   const [currentView, setCurrentView] = useState<string>('dashboard');
   const [backendAvailable, setBackendAvailable] = useState<boolean | null>(null);
   const supabase = useSupabase();
@@ -151,20 +158,13 @@ export const AdminPanel = () => {
   if (currentView === 'users') {
     return (
       <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentView('dashboard')}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Voltar ao Painel</span>
-          </Button>
-          <JardimBreadcrumb items={[
-            { label: 'Administração', href: '#' },
+        <JardimBreadcrumb 
+          items={[
+            { label: 'Administração', onClick: () => setCurrentView('dashboard') },
             { label: 'Gerenciar Usuários' }
-          ]} />
-        </div>
+          ]}
+          onHomeClick={() => onNavigate ? onNavigate('dashboard') : setCurrentView('dashboard')}
+        />
         <UserManagement />
       </div>
     );
@@ -173,20 +173,13 @@ export const AdminPanel = () => {
   if (currentView === 'init-system') {
     return (
       <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentView('dashboard')}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Voltar ao Painel</span>
-          </Button>
-          <JardimBreadcrumb items={[
-            { label: 'Administração', href: '#' },
+        <JardimBreadcrumb 
+          items={[
+            { label: 'Administração', onClick: () => setCurrentView('dashboard') },
             { label: 'Inicializar Sistema' }
-          ]} />
-        </div>
+          ]}
+          onHomeClick={() => onNavigate ? onNavigate('dashboard') : setCurrentView('dashboard')}
+        />
         <SystemInitializer />
       </div>
     );
@@ -196,20 +189,13 @@ export const AdminPanel = () => {
     console.log('[AdminPanel] Renderizando view: backup');
     return (
       <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentView('dashboard')}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Voltar ao Painel</span>
-          </Button>
-          <JardimBreadcrumb items={[
-            { label: 'Administração', href: '#' },
+        <JardimBreadcrumb 
+          items={[
+            { label: 'Administração', onClick: () => setCurrentView('dashboard') },
             { label: 'Backup de Dados' }
-          ]} />
-        </div>
+          ]}
+          onHomeClick={() => onNavigate ? onNavigate('dashboard') : setCurrentView('dashboard')}
+        />
         <div className="bg-white rounded-lg p-6 shadow-sm border border-[var(--border)]">
           <BackupPanel 
             criterios={mockCriterios} 
@@ -224,20 +210,13 @@ export const AdminPanel = () => {
     console.log('[AdminPanel] Renderizando view: settings');
     return (
       <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentView('dashboard')}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Voltar ao Painel</span>
-          </Button>
-          <JardimBreadcrumb items={[
-            { label: 'Administração', href: '#' },
+        <JardimBreadcrumb 
+          items={[
+            { label: 'Administração', onClick: () => setCurrentView('dashboard') },
             { label: 'Configurações do Sistema' }
-          ]} />
-        </div>
+          ]}
+          onHomeClick={() => onNavigate ? onNavigate('dashboard') : setCurrentView('dashboard')}
+        />
         <SystemSettings />
       </div>
     );
@@ -247,20 +226,13 @@ export const AdminPanel = () => {
     console.log('[AdminPanel] Renderizando view: alerts');
     return (
       <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentView('dashboard')}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Voltar ao Painel</span>
-          </Button>
-          <JardimBreadcrumb items={[
-            { label: 'Administração', href: '#' },
+        <JardimBreadcrumb 
+          items={[
+            { label: 'Administração', onClick: () => setCurrentView('dashboard') },
             { label: 'Configurar Alertas' }
-          ]} />
-        </div>
+          ]}
+          onHomeClick={() => onNavigate ? onNavigate('dashboard') : setCurrentView('dashboard')}
+        />
         <div className="space-y-4">
           {/* Indicador de status de e-mail */}
           <EmailStatusIndicator showFullAlert={true} />
@@ -277,20 +249,13 @@ export const AdminPanel = () => {
     console.log('[AdminPanel] Renderizando view: email');
     return (
       <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentView('dashboard')}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Voltar ao Painel</span>
-          </Button>
-          <JardimBreadcrumb items={[
-            { label: 'Administração', href: '#' },
+        <JardimBreadcrumb 
+          items={[
+            { label: 'Administração', onClick: () => setCurrentView('dashboard') },
             { label: 'Sistema de E-mail' }
-          ]} />
-        </div>
+          ]}
+          onHomeClick={() => onNavigate ? onNavigate('dashboard') : setCurrentView('dashboard')}
+        />
         <div className="bg-white rounded-lg p-6 shadow-sm border border-[var(--border)]">
           <EmailConfigPanel onClose={() => setCurrentView('dashboard')} />
         </div>
@@ -302,20 +267,13 @@ export const AdminPanel = () => {
     console.log('[AdminPanel] Renderizando view: alerts-debug');
     return (
       <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentView('dashboard')}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Voltar ao Painel</span>
-          </Button>
-          <JardimBreadcrumb items={[
-            { label: 'Administração', href: '#' },
+        <JardimBreadcrumb 
+          items={[
+            { label: 'Administração', onClick: () => setCurrentView('dashboard') },
             { label: 'Debug de Alertas' }
-          ]} />
-        </div>
+          ]}
+          onHomeClick={() => onNavigate ? onNavigate('dashboard') : setCurrentView('dashboard')}
+        />
         <div className="bg-white rounded-lg p-6 shadow-sm border border-[var(--border)]">
           <AlertsDebugPanel onClose={() => setCurrentView('dashboard')} />
         </div>
@@ -325,12 +283,25 @@ export const AdminPanel = () => {
 
   return (
     <div className="space-y-6">
-      <JardimBreadcrumb items={[{ label: 'Administração' }]} />
+      <JardimBreadcrumb 
+        items={[{ label: 'Administração' }]}
+        onHomeClick={() => onNavigate ? onNavigate('dashboard') : undefined}
+      />
       
       <div className="bg-white rounded-lg p-6 shadow-sm border border-[var(--border)]">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
-            <JardimLogo />
+            <div className="flex-shrink-0">
+              <ImageWithFallback 
+                src={logoRedonda}
+                alt="Prefeitura de Jardim - CE"
+                className="w-11 h-11 object-contain rounded-full"
+                style={{ 
+                  filter: 'drop-shadow(0 2px 4px rgba(74, 124, 89, 0.1)) brightness(1.05) contrast(1.05)',
+                  background: 'transparent'
+                }}
+              />
+            </div>
             <div>
               <h2 className="text-2xl font-bold text-[var(--jardim-green)]">Painel Administrativo</h2>
               <p className="text-[var(--jardim-gray)]">
@@ -345,11 +316,6 @@ export const AdminPanel = () => {
           />
         </div>
       </div>
-
-      {/* Status do Sistema */}
-      {backendAvailable !== null && (
-        <SystemStatus backendAvailable={backendAvailable} />
-      )}
 
       {/* Estatísticas do Sistema */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -387,30 +353,16 @@ export const AdminPanel = () => {
               return (
                 <Card 
                   key={index} 
-                  className={`cursor-pointer hover:shadow-lg transition-shadow ${
-                    action.action === 'settings' || action.action === 'backup' 
-                      ? 'border-2 border-red-500 bg-red-50' 
-                      : ''
-                  }`}
+                  className="cursor-pointer hover:shadow-lg transition-shadow"
                   onClick={() => handleAction(action.action)}
                 >
                   <CardHeader>
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${
-                        action.action === 'users' || action.action === 'init-system' || action.action === 'backup'
-                          ? 'bg-[var(--jardim-green-lighter)]' 
-                          : 'bg-blue-50'
-                      }`}>
-                        <Icon className={`h-5 w-5 ${
-                          action.action === 'users' || action.action === 'init-system' || action.action === 'backup' || action.action === 'settings'
-                            ? 'text-[var(--jardim-green)]' 
-                            : 'text-blue-600'
-                        }`} />
+                      <div className="p-2 rounded-lg bg-[var(--jardim-green-lighter)]">
+                        <Icon className="h-5 w-5 text-[var(--jardim-green)]" />
                       </div>
                       <CardTitle className="text-base">
-                        {action.action === 'settings' || action.action === 'backup' ? '🔧 ' : ''}
                         {action.title}
-                        {action.action === 'settings' || action.action === 'backup' ? ' [DEBUG]' : ''}
                       </CardTitle>
                     </div>
                   </CardHeader>
@@ -426,36 +378,17 @@ export const AdminPanel = () => {
         </CardContent>
       </Card>
 
+      {/* Teste de Email */}
+      <div className="flex justify-center">
+        <SimpleEmailTest />
+      </div>
+
       {/* Status do Sistema */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Status do Sistema</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span>API Principal</span>
-              <Badge variant="default">Online</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Banco de Dados</span>
-              <Badge variant="default">Conectado</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Serviço de E-mail</span>
-              <Badge variant="secondary">Configurando</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Backup Automático</span>
-              <Badge variant="default">Ativo</Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Cron Jobs</span>
-              <Badge variant="default">Executando</Badge>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {backendAvailable !== null && (
+        <SystemStatus backendAvailable={backendAvailable} />
+      )}
+
+
     </div>
   );
 };

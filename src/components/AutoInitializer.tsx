@@ -24,28 +24,44 @@ export const AutoInitializer = () => {
       setStatus('checking');
       setError('');
 
-      // Verificar se o servidor está online
+      // Verificar se estamos online primeiro
+      if (!navigator.onLine) {
+        console.log('📱 Sem conexão, usando modo mock');
+        setStatus('error');
+        setError('Sem conexão de internet. Sistema funcionando em modo local.');
+        return;
+      }
+
+      // Verificar se o servidor está online (com timeout mais curto)
       const healthCheck = await supabase.healthCheck();
       
       if (!healthCheck.success) {
+        console.log('⚠️ Servidor não disponível, usando modo mock');
         setStatus('error');
-        setError('Servidor Supabase não está disponível. Usando sistema mock.');
+        setError('Servidor não está disponível. Sistema funcionando em modo local com dados mock.');
         return;
       }
 
       // Tentar fazer login com admin para verificar se o sistema está inicializado
-      const loginTest = await supabase.login('admin', 'admin');
-      
-      if (loginTest.success) {
-        setStatus('initialized');
-        toast.success('Sistema já está inicializado e funcionando!');
-      } else {
-        setStatus('needs-init');
+      try {
+        const loginTest = await supabase.login('admin', 'admin');
+        
+        if (loginTest.success) {
+          setStatus('initialized');
+          toast.success('🚀 Sistema Supabase online e funcionando!', { duration: 3000 });
+        } else {
+          setStatus('needs-init');
+          toast.info('💡 Sistema online mas precisa ser inicializado');
+        }
+      } catch (loginError) {
+        console.log('⚠️ Erro no teste de login, usando modo mock');
+        setStatus('error');
+        setError('Servidor online mas com problemas de autenticação. Usando modo local.');
       }
     } catch (error) {
       console.error('Erro ao verificar status do sistema:', error);
       setStatus('error');
-      setError('Erro ao conectar com o servidor. Sistema funcionará em modo mock.');
+      setError('Erro de conexão. Sistema funcionando em modo local com dados mock.');
     }
   };
 
@@ -92,90 +108,45 @@ export const AutoInitializer = () => {
     switch (status) {
       case 'checking':
         return (
-          <Alert>
-            <RefreshCw className="h-4 w-4 animate-spin" />
-            <AlertDescription>
-              Verificando status do sistema...
-            </AlertDescription>
-          </Alert>
+          <div className="flex items-center justify-center py-2">
+            <RefreshCw className="h-4 w-4 animate-spin text-[var(--jardim-green)] mr-2" />
+            <span className="text-sm text-[var(--jardim-gray)]">Verificando sistema...</span>
+          </div>
         );
 
       case 'needs-init':
         return (
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
+          <Alert className="border-blue-200 bg-blue-50">
+            <Database className="h-4 w-4 text-blue-600" />
             <AlertDescription className="space-y-3">
               <div>
-                <strong>Sistema precisa ser inicializado</strong>
-                <p className="text-sm mt-1">
-                  O servidor Supabase está online, mas os dados iniciais não foram carregados. 
-                  Clique no botão abaixo para criar os usuários de teste.
+                <strong className="text-blue-800">Configuração inicial necessária</strong>
+                <p className="text-sm mt-1 text-blue-700">
+                  Clique para configurar os dados iniciais do sistema.
                 </p>
               </div>
               <Button
                 onClick={initializeSystem}
                 disabled={isInitializing}
                 size="sm"
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700"
               >
                 {isInitializing ? (
                   <RefreshCw className="h-4 w-4 animate-spin" />
                 ) : (
                   <Database className="h-4 w-4" />
                 )}
-                <span>{isInitializing ? 'Inicializando...' : 'Inicializar Sistema'}</span>
+                <span>{isInitializing ? 'Configurando...' : 'Configurar'}</span>
               </Button>
             </AlertDescription>
           </Alert>
         );
 
       case 'initialized':
-        return (
-          <Alert className="border-green-200 bg-green-50">
-            <CheckCircle className="h-4 w-4 text-green-600" />
-            <AlertDescription>
-              <div className="flex items-center justify-between">
-                <div>
-                  <strong className="text-green-800">Sistema inicializado</strong>
-                  <p className="text-sm text-green-700 mt-1">
-                    O servidor Supabase está funcionando e os usuários foram criados. 
-                    Você pode fazer login normalmente.
-                  </p>
-                </div>
-                <Badge variant="default" className="bg-green-600">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Online
-                </Badge>
-              </div>
-            </AlertDescription>
-          </Alert>
-        );
+        return null; // Não exibir nada quando inicializado
 
       case 'error':
-        return (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription className="space-y-3">
-              <div>
-                <strong>Problema de conexão</strong>
-                <p className="text-sm mt-1">{error}</p>
-                <p className="text-sm mt-2">
-                  <Info className="h-3 w-3 inline mr-1" />
-                  Use as credenciais mock para continuar. O sistema funcionará localmente.
-                </p>
-              </div>
-              <Button
-                onClick={checkSystemStatus}
-                size="sm"
-                variant="outline"
-                className="flex items-center space-x-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                <span>Tentar Novamente</span>
-              </Button>
-            </AlertDescription>
-          </Alert>
-        );
+        return null; // Não exibir alertas de erro na tela de login
 
       default:
         return null;
@@ -186,17 +157,7 @@ export const AutoInitializer = () => {
     <div className="w-full space-y-4">
       {renderContent()}
       
-      {status === 'initialized' && (
-        <div className="text-xs text-muted-foreground text-center">
-          <p>✅ Sistema online • 👤 Usuários criados • 🔐 Autenticação ativa</p>
-        </div>
-      )}
-      
-      {status === 'error' && (
-        <div className="text-xs text-muted-foreground text-center">
-          <p>🔧 Modo local ativo • 👤 Use credenciais mock abaixo</p>
-        </div>
-      )}
+
     </div>
   );
 };

@@ -7,6 +7,8 @@ import { Criterio, Alerta, Metricas, User } from '../types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { JardimLogo } from './JardimLogo';
+import { ImageWithFallback } from './figma/ImageWithFallback';
+import logoOficial from 'figma:asset/97c680715ce26ac99350792d1b163e8756c2dd6f.png';
 
 interface DashboardProps {
   criterios: Criterio[];
@@ -44,7 +46,17 @@ export const Dashboard = ({ criterios, alertas, metricas, user, onMarkAlertAsRea
       
       <div className="bg-white rounded-lg p-6 shadow-sm border border-[var(--border)]">
         <div className="flex items-center space-x-3 mb-4">
-          <JardimLogo className="w-12 h-12" />
+          <div className="flex-shrink-0">
+            <ImageWithFallback 
+              src={logoOficial}
+              alt="Prefeitura de Jardim - CE"
+              className="w-16 h-16 object-contain"
+              style={{ 
+                filter: 'drop-shadow(0 2px 4px rgba(74, 124, 89, 0.1)) brightness(1.05) contrast(1.05)',
+                background: 'transparent'
+              }}
+            />
+          </div>
           <div>
             <h2 className="text-2xl font-bold text-[var(--jardim-green)]">Indicadores de Transparência</h2>
             <p className="text-[var(--jardim-gray)]">

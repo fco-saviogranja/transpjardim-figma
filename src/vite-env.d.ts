@@ -11,3 +11,10 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+// Declaração para NodeJS timers no ambiente browser
+declare global {
+  namespace NodeJS {
+    interface Timeout extends ReturnType<typeof setTimeout> {}
+  }
+}

@@ -4,12 +4,11 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Alert, AlertDescription } from './ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { useAuth } from '../hooks/useAuth';
-import { SupabaseInitializer } from './SupabaseInitializer';
-import { LoginDiagnostic } from './LoginDiagnostic';
 import { AutoInitializer } from './AutoInitializer';
 import { JardimLogo } from './JardimLogo';
+import { ImageWithFallback } from './figma/ImageWithFallback';
+import logoRedonda from 'figma:asset/f6a9869d371560fae8a34486a3ae60bdf404d376.png';
 
 export const LoginForm = () => {
   const [username, setUsername] = useState('');
@@ -24,13 +23,18 @@ export const LoginForm = () => {
     setLoading(true);
 
     try {
+      console.log(`🔐 Tentando login: ${username}`);
       const success = await login(username, password);
       
       if (!success) {
-        setError('Credenciais inválidas. Verifique as credenciais de teste abaixo.');
+        console.log(`❌ Login falhou para: ${username}`);
+        setError(`Credenciais inválidas para "${username}". Verifique as credenciais de teste abaixo.`);
+      } else {
+        console.log(`✅ Login bem-sucedido para: ${username}`);
       }
     } catch (err) {
-      setError('Erro ao fazer login. Tente novamente.');
+      console.error('❌ Erro crítico no login:', err);
+      setError('Erro interno do sistema. Tente uma das credenciais de teste.');
     } finally {
       setLoading(false);
     }
@@ -41,7 +45,17 @@ export const LoginForm = () => {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <JardimLogo className="w-16 h-16 drop-shadow-lg" />
+            <div className="jardim-header-logo rounded-xl p-3">
+              <ImageWithFallback 
+                src={logoRedonda}
+                alt="Prefeitura de Jardim - CE"
+                className="w-16 h-16 object-contain rounded-xl"
+                style={{ 
+                  filter: 'drop-shadow(0 2px 4px rgba(74, 124, 89, 0.1)) brightness(1.05) contrast(1.05)',
+                  background: 'transparent'
+                }}
+              />
+            </div>
           </div>
           <CardTitle className="transpjardim-title transpjardim-title-large mb-2">
             TranspJardim
@@ -56,77 +70,51 @@ export const LoginForm = () => {
             <AutoInitializer />
           </div>
 
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="diagnostic">Diagnóstico</TabsTrigger>
-              <TabsTrigger value="supabase">Supabase</TabsTrigger>
-            </TabsList>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username">Usuário</Label>
+              <Input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Digite seu usuário"
+                required
+              />
+            </div>
             
-            <TabsContent value="login">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="username">Usuário</Label>
-                  <Input
-                    id="username"
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Digite seu usuário"
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Digite sua senha"
-                    required
-                  />
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Senha</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Digite sua senha"
+                required
+              />
+            </div>
 
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-                <Button 
-                  type="submit" 
-                  className="w-full bg-[var(--jardim-green)] hover:bg-[var(--jardim-green-light)] text-white"
-                  disabled={loading}
-                >
-                  {loading ? 'Entrando...' : 'Entrar'}
-                </Button>
-              </form>
+            <Button 
+              type="submit" 
+              className="w-full bg-[var(--jardim-green)] hover:bg-[var(--jardim-green-light)] text-white"
+              disabled={loading}
+            >
+              {loading ? 'Entrando...' : 'Entrar'}
+            </Button>
+          </form>
 
-              <div className="mt-6 p-3 bg-[var(--jardim-green-lighter)] rounded text-sm">
-                <p className="font-medium mb-2 text-[var(--jardim-green)]">Credenciais de Teste:</p>
-                <div className="space-y-1">
-                  <p className="text-[var(--jardim-gray)]">👤 Admin: <code className="bg-white px-1 rounded font-mono">admin / admin</code></p>
-                  <p className="text-[var(--jardim-gray)]">🎓 Educação: <code className="bg-white px-1 rounded font-mono">educacao / 123</code></p>
-                  <p className="text-[var(--jardim-gray)]">🏥 Saúde: <code className="bg-white px-1 rounded font-mono">saude / 123</code></p>
-                  <p className="text-[var(--jardim-gray)]">🏗️ Obras: <code className="bg-white px-1 rounded font-mono">obras / 123</code></p>
-                  <p className="text-[var(--jardim-gray)]">🌱 Ambiente: <code className="bg-white px-1 rounded font-mono">ambiente / 123</code></p>
-                </div>
-                <p className="text-xs text-[var(--jardim-gray)] mt-2">
-                  💡 Use qualquer uma das credenciais acima para acessar o sistema
-                </p>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="diagnostic">
-              <LoginDiagnostic />
-            </TabsContent>
-            
-            <TabsContent value="supabase">
-              <SupabaseInitializer />
-            </TabsContent>
-          </Tabs>
+          <div className="mt-6 text-center">
+            <p className="text-xs text-[var(--jardim-gray)]">
+              💡 Entre em contato com a administração para obter suas credenciais de acesso
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

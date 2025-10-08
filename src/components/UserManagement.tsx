@@ -17,6 +17,7 @@ import { secretarias, mockUsers } from '../lib/mockData';
 interface UserFormData {
   name: string;
   username: string;
+  email: string;
   password: string;
   role: 'admin' | 'padrão';
   secretaria?: string;
@@ -33,6 +34,7 @@ export const UserManagement = () => {
   const [formData, setFormData] = useState<UserFormData>({
     name: '',
     username: '',
+    email: '',
     password: '',
     role: 'padrão',
     secretaria: ''
@@ -80,6 +82,7 @@ export const UserManagement = () => {
     return users.filter(user =>
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (user.secretaria && user.secretaria.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [users, searchTerm]);
@@ -90,6 +93,7 @@ export const UserManagement = () => {
       setFormData({
         name: user.name,
         username: user.username,
+        email: user.email || '',
         password: '', // Não pré-preencher senha para edição
         role: user.role,
         secretaria: user.secretaria || ''
@@ -99,6 +103,7 @@ export const UserManagement = () => {
       setFormData({
         name: '',
         username: '',
+        email: '',
         password: '',
         role: 'padrão',
         secretaria: ''
@@ -114,6 +119,7 @@ export const UserManagement = () => {
     setFormData({
       name: '',
       username: '',
+      email: '',
       password: '',
       role: 'padrão',
       secretaria: ''
@@ -124,8 +130,15 @@ export const UserManagement = () => {
     e.preventDefault();
     
     // Validação
-    if (!formData.name.trim() || !formData.username.trim()) {
-      toast.error('Nome e usuário são obrigatórios');
+    if (!formData.name.trim() || !formData.username.trim() || !formData.email.trim()) {
+      toast.error('Nome, usuário e e-mail são obrigatórios');
+      return;
+    }
+
+    // Validação de e-mail
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error('Por favor, digite um e-mail válido');
       return;
     }
 
@@ -151,6 +164,7 @@ export const UserManagement = () => {
                   ...user, 
                   name: formData.name,
                   username: formData.username,
+                  email: formData.email,
                   role: formData.role,
                   secretaria: formData.role === 'admin' ? undefined : formData.secretaria
                 }
@@ -162,6 +176,7 @@ export const UserManagement = () => {
             id: `demo_${Date.now()}`,
             name: formData.name,
             username: formData.username,
+            email: formData.email,
             role: formData.role,
             secretaria: formData.role === 'admin' ? undefined : formData.secretaria
           };
@@ -177,6 +192,7 @@ export const UserManagement = () => {
         const response = await supabase.updateUser(editingUser.id, {
           name: formData.name,
           username: formData.username,
+          email: formData.email,
           ...(formData.password && { password: formData.password }),
           role: formData.role,
           secretaria: formData.role === 'admin' ? undefined : formData.secretaria
@@ -194,6 +210,7 @@ export const UserManagement = () => {
         const response = await supabase.createUser({
           name: formData.name,
           username: formData.username,
+          email: formData.email,
           password: formData.password,
           role: formData.role,
           secretaria: formData.role === 'admin' ? undefined : formData.secretaria
@@ -299,6 +316,18 @@ export const UserManagement = () => {
                       value={formData.username}
                       onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
                       placeholder="Ex: joao.silva"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email">E-mail</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="Ex: joao.silva@jardim.ce.gov.br"
                       required
                     />
                   </div>
@@ -422,7 +451,7 @@ export const UserManagement = () => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Buscar por nome, usuário ou secretaria..."
+                placeholder="Buscar por nome, usuário, e-mail ou secretaria..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -456,6 +485,7 @@ export const UserManagement = () => {
                   <TableRow>
                     <TableHead>Nome</TableHead>
                     <TableHead>Usuário</TableHead>
+                    <TableHead>E-mail</TableHead>
                     <TableHead>Nível</TableHead>
                     <TableHead>Secretaria</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -464,7 +494,7 @@ export const UserManagement = () => {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8">
+                      <TableCell colSpan={6} className="text-center py-8">
                         <div className="flex items-center justify-center space-x-2">
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[var(--jardim-green)]"></div>
                           <span>Carregando usuários...</span>
@@ -473,7 +503,7 @@ export const UserManagement = () => {
                     </TableRow>
                   ) : filteredUsers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                      <TableCell colSpan={6} className="text-center py-8 text-gray-500">
                         {searchTerm ? 'Nenhum usuário encontrado' : 'Nenhum usuário cadastrado'}
                       </TableCell>
                     </TableRow>
@@ -482,6 +512,7 @@ export const UserManagement = () => {
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.name}</TableCell>
                         <TableCell className="font-mono text-sm">{user.username}</TableCell>
+                        <TableCell className="text-sm text-blue-600">{user.email}</TableCell>
                         <TableCell>
                           <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
                             {user.role === 'admin' ? 'Administrador' : 'Usuário Padrão'}
@@ -520,6 +551,57 @@ export const UserManagement = () => {
               </Table>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Seção de Credenciais de Teste */}
+      <Card className="shadow-sm border border-[var(--border)]">
+        <CardHeader className="bg-[var(--jardim-green-lighter)] border-b border-[var(--border)]">
+          <CardTitle className="text-[var(--jardim-green)] flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Credenciais de Teste
+          </CardTitle>
+          <CardDescription>
+            Credenciais padrão para acesso ao sistema em modo de desenvolvimento
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm text-[var(--jardim-green)]">👤 Administrador</h4>
+              <div className="bg-gray-50 p-3 rounded border">
+                <p className="text-sm"><strong>Usuário:</strong> <code className="bg-white px-2 py-1 rounded font-mono">admin</code></p>
+                <p className="text-sm"><strong>Senha:</strong> <code className="bg-white px-2 py-1 rounded font-mono">admin</code></p>
+                <p className="text-xs text-gray-600 mt-1">Acesso completo ao sistema</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="font-medium text-sm text-[var(--jardim-green)]">👥 Usuários Padrão</h4>
+              <div className="space-y-2">
+                <div className="bg-gray-50 p-2 rounded border text-sm">
+                  <p>🎓 <strong>Educação:</strong> <code className="bg-white px-1 rounded font-mono">educacao</code> / <code className="bg-white px-1 rounded font-mono">123</code></p>
+                </div>
+                <div className="bg-gray-50 p-2 rounded border text-sm">
+                  <p>🏥 <strong>Saúde:</strong> <code className="bg-white px-1 rounded font-mono">saude</code> / <code className="bg-white px-1 rounded font-mono">123</code></p>
+                </div>
+                <div className="bg-gray-50 p-2 rounded border text-sm">
+                  <p>🏗️ <strong>Obras:</strong> <code className="bg-white px-1 rounded font-mono">obras</code> / <code className="bg-white px-1 rounded font-mono">123</code></p>
+                </div>
+                <div className="bg-gray-50 p-2 rounded border text-sm">
+                  <p>🌱 <strong>Ambiente:</strong> <code className="bg-white px-1 rounded font-mono">ambiente</code> / <code className="bg-white px-1 rounded font-mono">123</code></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <Alert className="mt-4 border-blue-200 bg-blue-50">
+            <AlertCircle className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800">
+              <strong>Importante:</strong> Em ambiente de produção, altere todas as senhas padrão e 
+              crie usuários específicos para cada secretaria com credenciais seguras.
+            </AlertDescription>
+          </Alert>
         </CardContent>
       </Card>
     </div>

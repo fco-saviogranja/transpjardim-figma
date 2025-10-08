@@ -21,9 +21,12 @@ import {
   Download,
   BarChart3,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Mail,
+  Loader2
 } from 'lucide-react';
 import { Alerta } from '../types';
+import { toast } from 'sonner@2.0.3';
 
 interface AdvancedAlertsPanelProps {
   alertas: Alerta[];
@@ -31,6 +34,8 @@ interface AdvancedAlertsPanelProps {
   onMarkAllAsRead?: () => void;
   onDeleteAlert?: (alertaId: string) => void;
   onArchiveAlert?: (alertaId: string) => void;
+  onSendEmailAlert?: (alertaId: string) => Promise<void>;
+  criterios?: any[]; // Para buscar informações do critério relacionado
 }
 
 export const AdvancedAlertsPanel = ({ 
@@ -38,7 +43,9 @@ export const AdvancedAlertsPanel = ({
   onMarkAsRead, 
   onMarkAllAsRead,
   onDeleteAlert,
-  onArchiveAlert 
+  onArchiveAlert,
+  onSendEmailAlert,
+  criterios = []
 }: AdvancedAlertsPanelProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('todos');
@@ -46,6 +53,7 @@ export const AdvancedAlertsPanel = ({
   const [filterStatus, setFilterStatus] = useState<string>('todos');
   const [sortBy, setSortBy] = useState<string>('data-desc');
   const [viewMode, setViewMode] = useState<'card' | 'compact'>('card');
+  const [sendingEmail, setSendingEmail] = useState<string | null>(null);
 
   // Filtros e ordenação
   const filteredAndSortedAlertas = useMemo(() => {
@@ -176,44 +184,87 @@ export const AdvancedAlertsPanel = ({
     window.URL.revokeObjectURL(url);
   };
 
-  const renderAlertCard = (alerta: Alerta) => (
-    <div
-      key={alerta.id}
-      className={`p-4 rounded-lg border transition-all hover:shadow-md ${
-        alerta.lido 
-          ? 'bg-gray-50 border-gray-200' 
-          : 'bg-white border-l-4 border-l-[var(--jardim-green)] shadow-sm'
-      }`}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 flex-1">
-          {getPriorityIcon(alerta.prioridade)}
-          
-          <div className="flex-1 space-y-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              {getPriorityBadge(alerta.prioridade)}
-              {getTypeBadge(alerta.tipo)}
-              {!alerta.lido && (
-                <Badge variant="default" className="text-xs bg-[var(--jardim-green)]">
-                  Novo
-                </Badge>
-              )}
-            </div>
+  const handleSendEmail = async (alertaId: string) => {
+    if (!onSendEmailAlert) return;
+    
+    setSendingEmail(alertaId);
+    try {
+      await onSendEmailAlert(alertaId);
+    } catch (error) {
+      console.error('Erro ao enviar email:', error);
+    } finally {
+      setSendingEmail(null);
+    }
+  };
+
+  const renderAlertCard = (alerta: Alerta) => {
+    // Buscar o critério relacionado ao alerta
+    const criterioRelacionado = criterios.find(c => c.id === alerta.criterioId);
+    
+    return (
+      <div
+        key={alerta.id}
+        className={`p-4 rounded-lg border transition-all hover:shadow-md ${
+          alerta.lido 
+            ? 'bg-gray-50 border-gray-200' 
+            : 'bg-white border-l-4 border-l-[var(--jardim-green)] shadow-sm'
+        }`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 flex-1">
+            {getPriorityIcon(alerta.prioridade)}
             
-            <p className={`text-sm ${alerta.lido ? 'text-muted-foreground' : 'text-foreground'}`}>
-              {alerta.mensagem}
-            </p>
-            
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {new Date(alerta.dataEnvio).toLocaleString('pt-BR')}
-              </span>
+            <div className="flex-1 space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {getPriorityBadge(alerta.prioridade)}
+                {getTypeBadge(alerta.tipo)}
+                {!alerta.lido && (
+                  <Badge variant="default" className="text-xs bg-[var(--jardim-green)]">
+                    Novo
+                  </Badge>
+                )}
+              </div>
+              
+              <div className="space-y-1">
+                <p className={`text-sm ${alerta.lido ? 'text-muted-foreground' : 'text-foreground'}`}>
+                  {alerta.mensagem}
+                </p>
+                
+                {/* Resumo técnico do critério */}
+                {criterioRelacionado && (
+                  <p className="text-xs text-gray-500">
+                    {criterioRelacionado.descricao}
+                  </p>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  {new Date(alerta.dataEnvio).toLocaleString('pt-BR')}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
         
         <div className="flex items-center gap-1">
+          {onSendEmailAlert && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleSendEmail(alerta.id)}
+              title="Enviar por e-mail para o responsável"
+              disabled={sendingEmail === alerta.id}
+              className="text-[var(--jardim-green)] hover:text-[var(--jardim-green-light)]"
+            >
+              {sendingEmail === alerta.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Mail className="h-4 w-4" />
+              )}
+            </Button>
+          )}
+
           {!alerta.lido && onMarkAsRead && (
             <Button
               variant="ghost"
@@ -262,27 +313,56 @@ export const AdvancedAlertsPanel = ({
       </div>
     </div>
   );
+};
 
-  const renderCompactAlert = (alerta: Alerta) => (
-    <div
-      key={alerta.id}
-      className={`flex items-center gap-3 py-2 px-3 rounded border-l-2 ${
-        alerta.lido 
-          ? 'bg-gray-50 border-l-gray-300' 
-          : 'bg-white border-l-[var(--jardim-green)]'
-      }`}
-    >
-      {getPriorityIcon(alerta.prioridade)}
-      <div className="flex-1 min-w-0">
-        <p className={`text-sm truncate ${alerta.lido ? 'text-muted-foreground' : 'text-foreground'}`}>
-          {alerta.mensagem}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {new Date(alerta.dataEnvio).toLocaleDateString('pt-BR')}
-        </p>
-      </div>
+  const renderCompactAlert = (alerta: Alerta) => {
+    // Buscar o critério relacionado ao alerta
+    const criterioRelacionado = criterios.find(c => c.id === alerta.criterioId);
+    
+    return (
+      <div
+        key={alerta.id}
+        className={`flex items-center gap-3 py-2 px-3 rounded border-l-2 ${
+          alerta.lido 
+            ? 'bg-gray-50 border-l-gray-300' 
+            : 'bg-white border-l-[var(--jardim-green)]'
+        }`}
+      >
+        {getPriorityIcon(alerta.prioridade)}
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm truncate ${alerta.lido ? 'text-muted-foreground' : 'text-foreground'}`}>
+            {alerta.mensagem}
+          </p>
+          
+          {/* Resumo técnico do critério */}
+          {criterioRelacionado && (
+            <p className="text-xs text-gray-500 truncate">
+              {criterioRelacionado.descricao}
+            </p>
+          )}
+          
+          <p className="text-xs text-muted-foreground">
+            {new Date(alerta.dataEnvio).toLocaleDateString('pt-BR')}
+          </p>
+        </div>
       <div className="flex items-center gap-1">
         {getPriorityBadge(alerta.prioridade)}
+        {onSendEmailAlert && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleSendEmail(alerta.id)}
+            title="Enviar por e-mail"
+            disabled={sendingEmail === alerta.id}
+            className="text-[var(--jardim-green)] hover:text-[var(--jardim-green-light)]"
+          >
+            {sendingEmail === alerta.id ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Mail className="h-3 w-3" />
+            )}
+          </Button>
+        )}
         {!alerta.lido && onMarkAsRead && (
           <Button
             variant="ghost"
@@ -295,6 +375,7 @@ export const AdvancedAlertsPanel = ({
       </div>
     </div>
   );
+};
 
   return (
     <div className="space-y-6">
