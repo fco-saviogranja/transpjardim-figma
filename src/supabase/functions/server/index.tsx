@@ -391,7 +391,7 @@ app.post('/make-server-225e1157/email/send-alert', async (c) => {
                 
                 <p>Por favor, acesse o sistema para marcar este critério como concluído quando apropriado.</p>
                 
-                <a href="https://transparenciajardim.app" class="button">Acessar TranspJardim</a>
+                <a href="https://transpjardim.tech" class="button">Acessar TranspJardim</a>
             </div>
             
             <div class="footer">
@@ -1336,7 +1336,7 @@ app.post('/make-server-225e1157/email/notify-users', async (c) => {
                 
                 <p>Por favor, acesse o sistema para verificar e atualizar o status dos critérios quando apropriado.</p>
                 
-                <a href="https://transparenciajardim.app" class="button">Acessar TranspJardim</a>
+                <a href="https://transpjardim.tech" class="button">Acessar TranspJardim</a>
             </div>
             
             <div class="footer">
