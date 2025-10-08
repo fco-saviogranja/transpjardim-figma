@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TranspJardim - Sistema de Transparência Municipal</title>
+    <meta name="description" content="Plataforma de transparência e monitoramento municipal de Jardim/CE">
+    <link rel="icon" href="figma:asset/97c680715ce26ac99350792d1b163e8756c2dd6f.png" type="image/png">
+    <meta name="theme-color" content="#4a7c59">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            color: #2d2d2d;
+        }
+        #root { min-height: 100vh; }
+        .loading { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            min-height: 100vh; 
+            text-align: center;
+        }
+        .spinner {
+            width: 40px; 
+            height: 40px; 
+            border: 4px solid #f3f3f3; 
+            border-top: 4px solid #4a7c59; 
+            border-radius: 50%; 
+            animation: spin 1s linear infinite; 
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading h1 {
+            color: #4a7c59;
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+        .loading p {
+            color: #6c757d;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div class="loading">
+            <div>
+                <div class="spinner"></div>
+                <h1>TranspJardim</h1>
+                <p>Carregando sistema de transparência...</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
